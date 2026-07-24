@@ -1,0 +1,13 @@
+# Environment variables / API Keys
+.env
+
+# Python bytecode and cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# IDE / Editor settings
+.vscode/
+.idea/

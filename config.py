@@ -1,0 +1,41 @@
+import os
+from dotenv import load_dotenv
+
+# .env 파일 로드
+load_dotenv()
+
+# 환경 변수
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "").strip()
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
+
+# Gemini 모델 설정 (기본: gemini-3.6-flash 또는 gemini-flash-latest)
+GEMINI_MODEL_NAME = "gemini-3.6-flash"
+
+
+# 모니터링 대상 유튜브 채널 목록 (검증된 Channel ID)
+TARGET_CHANNELS = [
+    {
+        "name": "삼프로TV",
+        "channel_id": "UChlv4GSd7OQl3js-jkLOnFA",
+        "rss_url": "https://www.youtube.com/feeds/videos.xml?channel_id=UChlv4GSd7OQl3js-jkLOnFA"
+    },
+    {
+        "name": "한경 코리아마켓",
+        "channel_id": "UCGCGxsbmG_9nincyI7xypow",
+        "rss_url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCGCGxsbmG_9nincyI7xypow"
+    },
+    {
+        "name": "한경 글로벌마켓",
+        "channel_id": "UCWskYkV4c4S9D__rsfOl2JA",
+        "rss_url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCWskYkV4c4S9D__rsfOl2JA"
+    },
+    {
+        "name": "와이스트릿",
+        "channel_id": "UCupslRq5jW95UGzPjOZz0FA",
+        "rss_url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCupslRq5jW95UGzPjOZz0FA"
+    }
+]
+
+# 텔레그램 메시지 길이 제한
+TELEGRAM_MAX_MESSAGE_LENGTH = 4000
