@@ -18,6 +18,8 @@ from youtube_collector import collect_all_recent_videos
 from analyzer import generate_daily_investment_report
 from telegram_sender import send_telegram_report
 
+import pytz
+
 # 로깅 설정
 logging.basicConfig(
     level=logging.INFO,
@@ -26,12 +28,15 @@ logging.basicConfig(
 )
 logger = logging.getLogger("DailyReportBot")
 
+def get_kst_now() -> datetime:
+    return datetime.now(pytz.timezone('Asia/Seoul'))
+
 def run_daily_investment_report_job(hours: int = 24):
     """
     데일리 투자 리포트 자동화 메인 작업 (수집 -> 분석 -> 발송)
     """
-    start_time = datetime.now()
-    logger.info("=== 데일리 투자 리포트 자동화 프로세스 시작 ===")
+    start_time = get_kst_now()
+    logger.info(f"=== 데일리 투자 리포트 자동화 프로세스 시작 (KST: {start_time.strftime('%Y-%m-%d %H:%M:%S')}) ===")
     
     try:
         # 1. 유튜브 신규 영상 수집 (지난 24시간)
@@ -46,7 +51,7 @@ def run_daily_investment_report_job(hours: int = 24):
         logger.info("3단계: 텔레그램 리포트 메시지 발송 중...")
         success = send_telegram_report(report_text)
         
-        elapsed = (datetime.now() - start_time).total_seconds()
+        elapsed = (get_kst_now() - start_time).total_seconds()
         if success:
             logger.info(f"=== 데일리 투자 리포트 발송 완료 (소요시간: {elapsed:.2f}초) ===")
         else:
@@ -69,7 +74,9 @@ def main():
     # 매일 오전 07:00 스케줄 등록
     target_time = "07:00"
     schedule.every().day.at(target_time).do(run_daily_investment_report_job, hours=24)
-    logger.info(f"⏰ 스케줄러가 등록되었습니다: 매일 오전 {target_time}에 실행됩니다.")
+    now_kst = get_kst_now().strftime('%Y-%m-%d %H:%M:%S')
+    logger.info(f"⏰ 스케줄러가 등록되었습니다 (현재 KST 시각: {now_kst})")
+    logger.info(f"⏰ 매일 한국시간 오전 {target_time}에 자동으로 리포트를 발송합니다.")
     logger.info("프로그램을 종료하려면 Ctrl+C를 누르세요.")
 
     while True:

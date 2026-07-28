@@ -14,6 +14,8 @@ NAMESPACES = {
     'media': 'http://search.yahoo.com/mrss/'
 }
 
+import time
+
 def fetch_channel_videos(channel_info: Dict[str, str], hours: int = 24) -> List[Dict[str, Any]]:
     """
     단일 유튜브 채널의 RSS 피드를 수집하여 지정된 시간(기본 24시간) 이내 업로드된 영상을 반환합니다.
@@ -22,14 +24,29 @@ def fetch_channel_videos(channel_info: Dict[str, str], hours: int = 24) -> List[
     rss_url = channel_info["rss_url"]
     recent_videos = []
 
-    try:
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        }
-        response = requests.get(rss_url, headers=headers, timeout=10)
-        response.raise_for_status()
+    response_text = None
+    for attempt in range(1, 4):
+        try:
+            headers = {
+                "User-Agent": f"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/12{attempt}.0.0.0 Safari/537.36"
+            }
+            response = requests.get(rss_url, headers=headers, timeout=10)
+            if response.status_code == 200:
+                response_text = response.text
+                break
+            else:
+                logger.warning(f"[{channel_name}] RSS 피드 재시도 {attempt}/3 (상태 코드: {response.status_code})")
+                time.sleep(1)
+        except requests.RequestException as e:
+            logger.warning(f"[{channel_name}] RSS 피드 요청 시도 {attempt}/3 실패: {e}")
+            time.sleep(1)
 
-        root = ET.fromstring(response.text)
+    if not response_text:
+        logger.error(f"[{channel_name}] RSS 피드 수집 실패 (3회 재시도 초과)")
+        return recent_videos
+
+    try:
+        root = ET.fromstring(response_text)
         now_utc = datetime.now(timezone.utc)
         cutoff_time = now_utc - timedelta(hours=hours)
 

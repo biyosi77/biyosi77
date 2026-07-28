@@ -22,8 +22,8 @@ TARGET_CHANNELS = [
     },
     {
         "name": "한경 코리아마켓",
-        "channel_id": "UCGCGxsbmG_9nincyI7xypow",
-        "rss_url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCGCGxsbmG_9nincyI7xypow"
+        "channel_id": "UC7cF2ZYvGm_zgrX-xCV88mA",
+        "rss_url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC7cF2ZYvGm_zgrX-xCV88mA"
     },
     {
         "name": "한경 글로벌마켓",
