@@ -4,7 +4,8 @@ on:
   schedule:
     # 매일 한국시간(KST) 오전 07:00 실행 (UTC 22:00 전날)
     - cron: '0 22 * * *'
-  workflow_dispatch: # 깃허브 웹(Actions 탭)에서 'Run workflow'로 즉시 테스트 가능
+  workflow_dispatch:
+
 
 jobs:
   run-daily-report:
