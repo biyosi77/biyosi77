@@ -78,16 +78,16 @@ async def send_telegram_report_async(text: str) -> bool:
 
         for idx, chunk in enumerate(chunks, 1):
             try:
-                # 마크다운 모드로 먼저 전송 시도
+                # HTML 모드로 안전하게 전송 시도
                 await bot.send_message(
                     chat_id=TELEGRAM_CHAT_ID,
                     text=chunk,
-                    parse_mode="Markdown",
+                    parse_mode="HTML",
                     disable_web_page_preview=True
                 )
             except TelegramError as te:
-                logger.warning(f"마크다운 파싱 오류 발생 ({te}). 일반 텍스트 모드로 재전송합니다.")
-                # 마크다운 태그 오류 시 일반 텍스트로 재전송
+                logger.warning(f"HTML 파싱 오류 발생 ({te}). 일반 텍스트 모드로 재전송합니다.")
+                # HTML 태그 오류 시 일반 텍스트로 안전 재전송
                 await bot.send_message(
                     chat_id=TELEGRAM_CHAT_ID,
                     text=chunk,

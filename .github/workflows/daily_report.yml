@@ -2,8 +2,8 @@ name: Daily Investment Report Automation
 
 on:
   schedule:
-    # 매일 한국시간(KST) 오전 07:00 실행 (UTC 22:00 전날)
-    - cron: '0 22 * * *'
+    # 매일 한국시간(KST) 오전 06:50 실행 (UTC 21:50 전날) - 깃허브 서버 정각 대기열 우회
+    - cron: '50 21 * * *'
   workflow_dispatch:
 
 
@@ -27,6 +27,7 @@ jobs:
 
       - name: Run Daily Investment Report
         env:
+          TZ: Asia/Seoul
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}

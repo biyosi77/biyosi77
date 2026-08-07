@@ -24,22 +24,30 @@ def fetch_channel_videos(channel_info: Dict[str, str], hours: int = 24) -> List[
     rss_url = channel_info["rss_url"]
     recent_videos = []
 
+    user_agents = [
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0"
+    ]
+
     response_text = None
     for attempt in range(1, 4):
         try:
             headers = {
-                "User-Agent": f"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/12{attempt}.0.0.0 Safari/537.36"
+                "User-Agent": user_agents[(attempt - 1) % len(user_agents)],
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7"
             }
-            response = requests.get(rss_url, headers=headers, timeout=10)
+            response = requests.get(rss_url, headers=headers, timeout=12)
             if response.status_code == 200:
                 response_text = response.text
                 break
             else:
                 logger.warning(f"[{channel_name}] RSS 피드 재시도 {attempt}/3 (상태 코드: {response.status_code})")
-                time.sleep(1)
+                time.sleep(2)
         except requests.RequestException as e:
             logger.warning(f"[{channel_name}] RSS 피드 요청 시도 {attempt}/3 실패: {e}")
-            time.sleep(1)
+            time.sleep(2)
 
     if not response_text:
         logger.error(f"[{channel_name}] RSS 피드 수집 실패 (3회 재시도 초과)")
@@ -106,13 +114,28 @@ def fetch_channel_videos(channel_info: Dict[str, str], hours: int = 24) -> List[
 
 def collect_all_recent_videos(hours: int = 24) -> List[Dict[str, Any]]:
     """
-    모든 대상 채널의 지난 hours 시간 내 신규 영상을 수집합니다.
+    모든 대상 채널의 신규 영상을 수집합니다.
+    지정된 hours 이내 영상이 없을 경우 주말/공휴일을 고려하여 48시간, 72시간으로 자동 확장 수집합니다.
     """
     all_videos = []
+    current_hours = hours
+
     for channel in TARGET_CHANNELS:
-        videos = fetch_channel_videos(channel, hours=hours)
+        videos = fetch_channel_videos(channel, hours=current_hours)
         all_videos.extend(videos)
-    
+
+    # 24시간 내 수집된 영상이 0건이면 48시간, 72시간으로 자동 확장 시도
+    if not all_videos and current_hours < 72:
+        for fallback_hours in [48, 72]:
+            logger.info(f" recent {current_hours}시간 내 영상 없음. 수집 범위를 {fallback_hours}시간으로 확장 시도합니다...")
+            all_videos = []
+            for channel in TARGET_CHANNELS:
+                videos = fetch_channel_videos(channel, hours=fallback_hours)
+                all_videos.extend(videos)
+            if all_videos:
+                logger.info(f"{fallback_hours}시간 확장 수집 성공: 총 {len(all_videos)}개 영상 수집됨.")
+                break
+
     logger.info(f"전체 채널에서 총 {len(all_videos)}개의 신규 영상 수집 완료.")
     return all_videos
 

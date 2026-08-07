@@ -51,31 +51,31 @@ def generate_daily_investment_report(videos: List[Dict[str, Any]]) -> str:
 
 [작성 지침]
 1. 리포트 제목은 반드시 "📊 데일리 투자리포트(요약)"으로 시작하세요.
-2. 과도한 마크다운 기호(##, ###, 불필요한 ** 남발)를 절대 사용하지 마세요. 깔끔한 제목 구분과 불릿 기호(•) 및 적절한 이모지만 사용하세요.
+2. 마크다운 기호(#, ##, **)나 특수 기호를 사용하지 말고, 제목은 <b>제목</b> 형태의 HTML 태그나 불릿 기호(•) 및 적절한 이모지만 사용하세요.
 3. 리포트는 아래 4가지 포인트별로 핵심 메시지를 키워드 중심으로 깔끔하게 작성하세요:
    - 시장시황
    - 산업동향
    - 주요기업 이슈
    - 거시경제 및 리스크
 4. 리포트 말미에는 반드시 "💡 오늘의 핵심 인사이트" 요약을 작성하세요.
-5. 전체 리포트 분량은 하단 링크를 포함하여 반드시 **1,500자 이내**가 되도록 작성하세요.
+5. 전체 리포트 분량은 하단 링크를 포함하여 반드시 1,500자 이내가 되도록 작성하세요.
 
 [출력 구조 예시]
-📊 데일리 투자리포트(요약)
+📊 <b>데일리 투자리포트(요약)</b>
 
-1. 시장시황
+<b>1. 시장시황</b>
 • (핵심 키워드 중심 시장 흐름 요약)
 
-2. 산업동향
+<b>2. 산업동향</b>
 • (주목받은 산업 및 섹터 핵심 요약)
 
-3. 주요기업 이슈
+<b>3. 주요기업 이슈</b>
 • (대표 기업 핵심 이슈 요약)
 
-4. 거시경제 및 리스크
+<b>4. 거시경제 및 리스크</b>
 • (금리, 환율, 통화정책 등 거시 리스크 핵심 요약)
 
-💡 오늘의 핵심 인사이트
+💡 <b>오늘의 핵심 인사이트</b>
 • (오늘 꼭 기억해야 할 핵심 인사이트 1줄)
 """
 
@@ -90,9 +90,9 @@ def generate_daily_investment_report(videos: List[Dict[str, Any]]) -> str:
                 contents=prompt
             )
         except Exception as model_err:
-            logger.warning(f"모델 {GEMINI_MODEL_NAME} 호출 실패 ({model_err}). fallback 모델(gemini-flash-latest)로 시도합니다.")
+            logger.warning(f"모델 {GEMINI_MODEL_NAME} 호출 실패 ({model_err}). fallback 모델(gemini-2.5-flash)로 시도합니다.")
             response = client.models.generate_content(
-                model="gemini-flash-latest",
+                model="gemini-2.5-flash",
                 contents=prompt
             )
 
@@ -102,7 +102,7 @@ def generate_daily_investment_report(videos: List[Dict[str, Any]]) -> str:
         # 핵심 영상 링크만 부록으로 추가 (상위 핵심 영상 2~3개)
         sources_footer = ""
         if videos:
-            sources_footer = "\n\n🔗 핵심 영상 링크\n"
+            sources_footer = "\n\n🔗 <b>핵심 영상 링크</b>\n"
             for video in videos[:3]:
                 sources_footer += f"• [{video['channel_name']}] {video['title']}\n  {video['link']}\n"
 
@@ -110,7 +110,7 @@ def generate_daily_investment_report(videos: List[Dict[str, Any]]) -> str:
 
     except Exception as e:
         logger.error(f"Gemini API 호출 중 오류 발생: {e}")
-        return f"⚠️ **[오류]** Gemini 리포트 생성 실패: {str(e)}"
+        return f"⚠️ <b>[오류]</b> Gemini 리포트 생성 실패: {str(e)}"
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)

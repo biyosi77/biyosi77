@@ -31,34 +31,44 @@ logger = logging.getLogger("DailyReportBot")
 def get_kst_now() -> datetime:
     return datetime.now(pytz.timezone('Asia/Seoul'))
 
-def run_daily_investment_report_job(hours: int = 24):
+def run_daily_investment_report_job(hours: int = 24, max_retries: int = 3):
     """
     데일리 투자 리포트 자동화 메인 작업 (수집 -> 분석 -> 발송)
+    일시적 네트워크 장애 발생 시 최대 max_retries 회 재시도합니다.
     """
     start_time = get_kst_now()
     logger.info(f"=== 데일리 투자 리포트 자동화 프로세스 시작 (KST: {start_time.strftime('%Y-%m-%d %H:%M:%S')}) ===")
     
-    try:
-        # 1. 유튜브 신규 영상 수집 (지난 24시간)
-        logger.info("1단계: 유튜브 4대 채널 신규 영상 수집 중...")
-        videos = collect_all_recent_videos(hours=hours)
-        
-        # 2. Gemini AI 투자 리포트 분석 및 생성
-        logger.info("2단계: Gemini AI를 활용한 4대 관점 데일리 리포트 생성 중...")
-        report_text = generate_daily_investment_report(videos)
-        
-        # 3. 텔레그램 메시지 전송 (4,096자 자동 분할 처리)
-        logger.info("3단계: 텔레그램 리포트 메시지 발송 중...")
-        success = send_telegram_report(report_text)
-        
-        elapsed = (get_kst_now() - start_time).total_seconds()
-        if success:
-            logger.info(f"=== 데일리 투자 리포트 발송 완료 (소요시간: {elapsed:.2f}초) ===")
-        else:
-            logger.warning(f"=== 리포트가 생성되었으나 텔레그램 발송 실패/대체 (소요시간: {elapsed:.2f}초) ===")
-
-    except Exception as e:
-        logger.error(f"프로세스 실행 중 예외 발생: {e}", exc_info=True)
+    for attempt in range(1, max_retries + 1):
+        try:
+            # 1. 유튜브 신규 영상 수집 (기본 24시간, 수집 0건 시 자동 48~72시간 확장)
+            logger.info(f"1단계: 유튜브 4대 채널 신규 영상 수집 중... (시도 {attempt}/{max_retries})")
+            videos = collect_all_recent_videos(hours=hours)
+            
+            # 2. Gemini AI 투자 리포트 분석 및 생성
+            logger.info("2단계: Gemini AI를 활용한 4대 관점 데일리 리포트 생성 중...")
+            report_text = generate_daily_investment_report(videos)
+            
+            # 3. 텔레그램 메시지 전송 (4,096자 자동 분할 & HTML 포맷)
+            logger.info("3단계: 텔레그램 리포트 메시지 발송 중...")
+            success = send_telegram_report(report_text)
+            
+            elapsed = (get_kst_now() - start_time).total_seconds()
+            if success:
+                logger.info(f"=== 데일리 투자 리포트 발송 완료 (소요시간: {elapsed:.2f}초) ===")
+                return True
+            else:
+                logger.warning(f"=== 리포트가 생성되었으나 텔레그램 발송 실패/대체 (시도 {attempt}/{max_retries}) ===")
+                if attempt < max_retries:
+                    time.sleep(10)
+        except Exception as e:
+            logger.error(f"프로세스 실행 중 예외 발생 (시도 {attempt}/{max_retries}): {e}", exc_info=True)
+            if attempt < max_retries:
+                logger.info("10초 후 재시도합니다...")
+                time.sleep(10)
+    
+    logger.error("❌ 데일리 투자 리포트 프로세스가 지정된 재시도 횟수를 초과하여 최종 실패하였습니다.")
+    return False
 
 def main():
     parser = argparse.ArgumentParser(description="유튜브 투자 영상 분석 및 텔레그램 데일리 리포트 자동화 시스템")
