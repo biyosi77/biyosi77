@@ -43,7 +43,8 @@ def run_daily_investment_report_job(hours: int = 24, max_retries: int = 3):
     bot_token_ok = bool(TELEGRAM_BOT_TOKEN and TELEGRAM_BOT_TOKEN != "your_telegram_bot_token_here")
     chat_id_ok = bool(TELEGRAM_CHAT_ID and TELEGRAM_CHAT_ID != "your_telegram_chat_id_here")
     gemini_key_ok = bool(GEMINI_API_KEY and GEMINI_API_KEY != "your_gemini_api_key_here")
-    logger.info(f"🔑 환경변수 로드 상태: TELEGRAM_BOT_TOKEN={'OK' if bot_token_ok else '❌ 누락'}, TELEGRAM_CHAT_ID={'OK' if chat_id_ok else '❌ 누락'}, GEMINI_API_KEY={'OK' if gemini_key_ok else '❌ 누락'}")
+    masked_chat_id = (TELEGRAM_CHAT_ID[:4] + "..." + TELEGRAM_CHAT_ID[-4:]) if len(TELEGRAM_CHAT_ID) >= 8 else "INVALID/EMPTY"
+    logger.info(f"🔑 환경변수 로드 상태: TELEGRAM_BOT_TOKEN={'OK' if bot_token_ok else '❌ 누락'}, TELEGRAM_CHAT_ID={'OK (' + masked_chat_id + ')' if chat_id_ok else '❌ 누락'}, GEMINI_API_KEY={'OK' if gemini_key_ok else '❌ 누락'}")
 
     for attempt in range(1, max_retries + 1):
         try:

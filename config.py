@@ -4,10 +4,13 @@ from dotenv import load_dotenv
 # .env 파일 로드
 load_dotenv()
 
-# 환경 변수
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
-TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "").strip()
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
+# 환경 변수 및 자동 포맷 정화 (따옴표 제거 & 채널 ID 마이너스(-) 자동 보정)
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "").strip().strip('"').strip("'")
+_raw_chat_id = os.getenv("TELEGRAM_CHAT_ID", "").strip().strip('"').strip("'")
+if _raw_chat_id and _raw_chat_id.startswith("100") and not _raw_chat_id.startswith("-"):
+    _raw_chat_id = "-" + _raw_chat_id
+TELEGRAM_CHAT_ID = _raw_chat_id
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip().strip('"').strip("'")
 
 # Gemini 모델 설정 (기본: gemini-3.6-flash 또는 gemini-flash-latest)
 GEMINI_MODEL_NAME = "gemini-3.6-flash"
