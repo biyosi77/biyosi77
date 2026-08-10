@@ -39,6 +39,12 @@ def run_daily_investment_report_job(hours: int = 24, max_retries: int = 3):
     start_time = get_kst_now()
     logger.info(f"=== 데일리 투자 리포트 자동화 프로세스 시작 (KST: {start_time.strftime('%Y-%m-%d %H:%M:%S')}) ===")
     
+    from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, GEMINI_API_KEY
+    bot_token_ok = bool(TELEGRAM_BOT_TOKEN and TELEGRAM_BOT_TOKEN != "your_telegram_bot_token_here")
+    chat_id_ok = bool(TELEGRAM_CHAT_ID and TELEGRAM_CHAT_ID != "your_telegram_chat_id_here")
+    gemini_key_ok = bool(GEMINI_API_KEY and GEMINI_API_KEY != "your_gemini_api_key_here")
+    logger.info(f"🔑 환경변수 로드 상태: TELEGRAM_BOT_TOKEN={'OK' if bot_token_ok else '❌ 누락'}, TELEGRAM_CHAT_ID={'OK' if chat_id_ok else '❌ 누락'}, GEMINI_API_KEY={'OK' if gemini_key_ok else '❌ 누락'}")
+
     for attempt in range(1, max_retries + 1):
         try:
             # 1. 유튜브 신규 영상 수집 (기본 24시간, 수집 0건 시 자동 48~72시간 확장)
@@ -78,7 +84,10 @@ def main():
 
     if args.now:
         logger.info("즉시 실행(--now) 옵션이 감지되었습니다.")
-        run_daily_investment_report_job(hours=args.hours)
+        success = run_daily_investment_report_job(hours=args.hours)
+        if not success:
+            logger.error("❌ 작업 실패로 인해 프로세스를 종료 상태 코드 1로 비정상 종료합니다.")
+            sys.exit(1)
         return
 
     # 매일 오전 07:00 스케줄 등록
