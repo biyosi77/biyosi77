@@ -69,6 +69,23 @@ jobs:
         run: pip install -r valuation/requirements.txt
       - name: Core tests
         run: python -m pytest valuation/tests -q
+      - name: Check KRX and Telegram access without sending
+        run: |
+          python - <<'PY'
+          from datetime import date
+          from valuation.api import MarketData, DataError
+          from valuation.delivery import Telegram, DeliveryError
+          try:
+              rows = MarketData().krx('stk_bydd_trd', date(2026, 10, 16))
+              print(f'KRX close rows: {len(rows)}')
+          except DataError as exc:
+              print(f'KRX check failed: {exc}')
+          try:
+              Telegram().check_permission()
+              print('Telegram channel post permission: confirmed')
+          except DeliveryError as exc:
+              print(f'Telegram check failed: {exc}')
+          PY
       - name: Build, validate, and optionally send
         run: python -m valuation.run
       - name: Preserve report and sanitized log
