@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import re
 import time
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -80,13 +81,24 @@ class MarketData:
                     # exposing the request URL, authorization header, or response body.
                     status = getattr(getattr(exc, "response", None), "status_code", None)
                     detail = f"HTTP {status}" if status else type(exc).__name__
+                    response = getattr(exc, "response", None)
+                    if response is not None and "json" in response.headers.get("Content-Type", ""):
+                        try:
+                            body = response.json()
+                            code = str(body.get("error_code") or body.get("msg_cd") or "")
+                            if re.fullmatch(r"[A-Za-z0-9_]{1,24}", code):
+                                detail += f", code {code}"
+                        except (ValueError, AttributeError):
+                            pass
                     raise DataError(f"{service} request failed ({detail})") from None
                 self.sleep(2 ** attempt)
         raise DataError("market API retries exhausted")
 
     def _access_token(self):
         if self.token is None:
-            payload = self._request("POST", KIS + "/oauth2/tokenP", json={
+            payload = self._request("POST", KIS + "/oauth2/tokenP", headers={
+                "Accept": "text/plain", "charset": "UTF-8",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/114.0.0.0 Safari/537.36"}, json={
                 "grant_type": "client_credentials", "appkey": self.app_key,
                 "appsecret": self.app_secret})
             self.token = payload.get("access_token")
