@@ -1,6 +1,6 @@
 # 2027 국내주식 밸류에이션 자동화
 
-> 운영 상태 (2026-10-19): 신규 YoY 양식으로 템플릿을 교체했습니다. 종전 양식에서는 거래일 2026-10-16의 종가와 11:30 실데이터 dry-run에서 각각 90/90종목 가격을 확인했고, 종가 파일의 `[테스트]` 텔레그램 전송과 기본 브랜치 `workflow_dispatch` dry-run에 성공했습니다([실행 기록](https://github.com/biyosi77/biyosi77/actions/runs/39189443910)). 신규 양식은 핵심 테스트 및 전송 없는 로컬 파일 생성·검증을 통과했습니다. 신규 양식의 GitHub Actions 실행과 전송은 별도로 확인해야 합니다.
+> 운영 상태 (2026-10-19): 신규 YoY 양식으로 템플릿을 교체했습니다. 신규 양식의 [GitHub Actions 종가 dry-run](https://github.com/biyosi77/biyosi77/actions/runs/39190867430)은 90/90종목 가격과 엑셀 검증, 10개 테스트를 통과했습니다. [11:30 `[테스트]` 문서 전송](https://github.com/biyosi77/biyosi77/actions/runs/39191006413)도 90/90종목으로 성공했고 텔레그램 메시지 ID 154, 전송 기록 `sent`를 확인했습니다. 평일 12:00·16:00(Asia/Seoul) 예약을 기본 브랜치에 다시 설정했습니다. 신규 양식의 최초 예약 실행 완료 여부는 Actions에서 확인해야 합니다.
 
 `valuation/template/2027_valuation_20261016_yoy.xlsx`의 90종목과 새 26E·YoY 열을 기준으로 별도 보고서를 만듭니다. 이전 템플릿은 이력으로 보존합니다. 기존 유튜브 리포트의 `.github/workflows/daily_report.yml`, `main.py`, 루트 의존성은 수정하지 않습니다. 보고서는 `valuation_YYYYMMDD_1130.xlsx` 또는 `valuation_YYYYMMDD_close.xlsx`이며 원본 템플릿을 덮어쓰지 않습니다.
 

@@ -1,6 +1,11 @@
 name: KRX 2027 valuation
 
 on:
+  schedule:
+    - cron: '0 12 * * 1-5'
+      timezone: Asia/Seoul
+    - cron: '0 16 * * 1-5'
+      timezone: Asia/Seoul
   workflow_dispatch:
     inputs:
       trade_date:
