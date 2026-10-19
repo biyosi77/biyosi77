@@ -1,4 +1,5 @@
 name: KRX 2027 valuation
+# One-time credential-normalization dry-run; no document is sent.
 
 on:
   push:
