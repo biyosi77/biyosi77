@@ -1,10 +1,6 @@
 name: KRX 2027 valuation
-# One-time credential-normalization dry-run; no document is sent.
 
 on:
-  push:
-    branches: [main]
-    paths: ['.github/workflows/valuation.yml']
   workflow_dispatch:
     inputs:
       trade_date:
@@ -47,11 +43,11 @@ jobs:
     timeout-minutes: 45
     env:
       TZ: Asia/Seoul
-      TRADE_DATE: ${{ github.event_name == 'push' && '2026-10-16' || inputs.trade_date }}
-      SLOT: ${{ github.event_name == 'push' && 'close' || inputs.slot }}
-      DRY_RUN: ${{ github.event_name == 'push' && 'true' || inputs.dry_run }}
-      TEST_SEND: ${{ github.event_name == 'push' && 'true' || inputs.test_send }}
-      RESEND: ${{ github.event_name == 'push' && 'false' || inputs.resend }}
+      TRADE_DATE: ${{ inputs.trade_date }}
+      SLOT: ${{ inputs.slot }}
+      DRY_RUN: ${{ inputs.dry_run }}
+      TEST_SEND: ${{ inputs.test_send }}
+      RESEND: ${{ inputs.resend }}
       OUTPUT_DIR: valuation-output
       KIS_APP_KEY: ${{ secrets.KIS_APP_KEY }}
       KIS_APP_SECRET: ${{ secrets.KIS_APP_SECRET }}
@@ -70,23 +66,6 @@ jobs:
         run: pip install -r valuation/requirements.txt
       - name: Core tests
         run: python -m pytest valuation/tests -q
-      - name: Check KRX and Telegram access without sending
-        run: |
-          python - <<'PY'
-          from datetime import date
-          from valuation.api import MarketData, DataError
-          from valuation.delivery import Telegram, DeliveryError
-          try:
-              rows = MarketData().krx('stk_bydd_trd', date(2026, 10, 16))
-              print(f'KRX close rows: {len(rows)}')
-          except DataError as exc:
-              print(f'KRX check failed: {exc}')
-          try:
-              Telegram().check_permission()
-              print('Telegram channel post permission: confirmed')
-          except DeliveryError as exc:
-              print(f'Telegram check failed: {exc}')
-          PY
       - name: Build, validate, and optionally send
         run: python -m valuation.run
       - name: Preserve report and sanitized log
@@ -97,4 +76,3 @@ jobs:
           path: valuation-output/
           if-no-files-found: ignore
           retention-days: ${{ vars.VALUATION_ARTIFACT_DAYS || 30 }}
-
