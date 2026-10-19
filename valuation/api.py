@@ -63,6 +63,8 @@ class MarketData:
             raise DataError("KIS_APP_KEY, KIS_APP_SECRET, KRX_API_KEY 설정 필요")
 
     def _request(self, method, url, *, headers=None, params=None, json=None):
+        service = ("KIS token" if url.endswith("/oauth2/tokenP") else
+                   "KIS market" if url.startswith(KIS) else "KRX market")
         for attempt in range(3):
             try:
                 response = self.session.request(method, url, headers=headers, params=params,
@@ -74,8 +76,11 @@ class MarketData:
                 return response.json()
             except (requests.RequestException, ValueError) as exc:
                 if attempt == 2:
-                    # Never print the URL: the Telegram token is not used here, but keep logs clean.
-                    raise DataError(f"market API request failed ({type(exc).__name__})") from None
+                    # Service and HTTP code identify a configuration failure without
+                    # exposing the request URL, authorization header, or response body.
+                    status = getattr(getattr(exc, "response", None), "status_code", None)
+                    detail = f"HTTP {status}" if status else type(exc).__name__
+                    raise DataError(f"{service} request failed ({detail})") from None
                 self.sleep(2 ** attempt)
         raise DataError("market API retries exhausted")
 
@@ -220,3 +225,4 @@ class MarketData:
                     (minute_error or "당일 11:30 이전 정규장 분봉 없음") if not minute else "상장주식 수 미확인")
             self.sleep(0.12)
         return quotes
+
