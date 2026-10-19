@@ -3,9 +3,10 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import pytest
+import requests
 from openpyxl import load_workbook
 
-from valuation.api import MarketData, Quote, choose_minute
+from valuation.api import DataError, KIS, MarketData, Quote, choose_minute
 from valuation.delivery import DeliveryError, Ledger
 from valuation.run import enforce_time, latest_scheduled_day
 from valuation.workbook import MAIN, RAW, build, records
@@ -25,6 +26,25 @@ def test_price_time_selects_latest_prior_bar_on_requested_day():
     assert choose_minute(bars, DAY) == ("113000", 102)
     assert choose_minute(bars[:-1], DAY) == ("112900", 101)
     assert choose_minute(bars[:2], DAY) is None
+
+
+def test_invalid_api_secret_is_not_retried_or_logged():
+    class Session:
+        calls = 0
+        def request(self, *args, **kwargs):
+            self.calls += 1
+            response = requests.Response()
+            response.status_code = 403
+            response.headers["Content-Type"] = "application/json"
+            response._content = b'{"error_code":"EGW00105","appsecret":"sensitive"}'
+            return response
+    client = MarketData.__new__(MarketData)
+    client.session = Session()
+    client.sleep = lambda _: None
+    with pytest.raises(DataError, match=r"KIS token request failed \(HTTP 403, code EGW00105\)") as error:
+        client._request("POST", KIS + "/oauth2/tokenP", json={})
+    assert client.session.calls == 1
+    assert "sensitive" not in str(error.value)
 
 
 def test_holiday_requires_exact_day_and_open_flag():

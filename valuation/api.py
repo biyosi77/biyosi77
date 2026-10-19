@@ -76,10 +76,10 @@ class MarketData:
                 response.raise_for_status()
                 return response.json()
             except (requests.RequestException, ValueError) as exc:
-                if attempt == 2:
+                status = getattr(getattr(exc, "response", None), "status_code", None)
+                if attempt == 2 or (status is not None and status not in (429, 500, 502, 503, 504)):
                     # Service and HTTP code identify a configuration failure without
                     # exposing the request URL, authorization header, or response body.
-                    status = getattr(getattr(exc, "response", None), "status_code", None)
                     detail = f"HTTP {status}" if status else type(exc).__name__
                     response = getattr(exc, "response", None)
                     if response is not None and "json" in response.headers.get("Content-Type", ""):
@@ -237,4 +237,3 @@ class MarketData:
                     (minute_error or "당일 11:30 이전 정규장 분봉 없음") if not minute else "상장주식 수 미확인")
             self.sleep(0.12)
         return quotes
-
