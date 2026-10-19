@@ -3,7 +3,7 @@ name: KRX 2027 valuation
 on:
   push:
     branches: [main]
-    paths: ['.github/workflows/valuation.yml']
+    paths: ['.github/workflows/valuation.yml', 'valuation/**']
   workflow_dispatch:
     inputs:
       trade_date:
