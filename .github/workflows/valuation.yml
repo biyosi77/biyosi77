@@ -1,6 +1,9 @@
 name: KRX 2027 valuation
 
 on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/valuation.yml']
   workflow_dispatch:
     inputs:
       trade_date:
@@ -43,11 +46,11 @@ jobs:
     timeout-minutes: 45
     env:
       TZ: Asia/Seoul
-      TRADE_DATE: ${{ inputs.trade_date }}
-      SLOT: ${{ inputs.slot }}
-      DRY_RUN: ${{ inputs.dry_run }}
-      TEST_SEND: ${{ inputs.test_send }}
-      RESEND: ${{ inputs.resend }}
+      TRADE_DATE: ${{ github.event_name == 'push' && '2026-10-16' || inputs.trade_date }}
+      SLOT: ${{ github.event_name == 'push' && '1130' || inputs.slot }}
+      DRY_RUN: ${{ github.event_name == 'push' && 'true' || inputs.dry_run }}
+      TEST_SEND: ${{ github.event_name == 'push' && 'true' || inputs.test_send }}
+      RESEND: ${{ github.event_name == 'push' && 'false' || inputs.resend }}
       OUTPUT_DIR: valuation-output
       KIS_APP_KEY: ${{ secrets.KIS_APP_KEY }}
       KIS_APP_SECRET: ${{ secrets.KIS_APP_SECRET }}
