@@ -13,7 +13,7 @@ from .api import DataError, KST, MarketData, Quote
 from .delivery import DeliveryError, DuplicateDelivery, Ledger, Telegram
 from .workbook import build, records
 
-TEMPLATE = Path(__file__).parent / "template" / "2027_valuation_20261015_close.xlsx"
+TEMPLATE = Path(__file__).parent / "template" / "2027_valuation_20261016_yoy.xlsx"
 
 
 def flag(value):

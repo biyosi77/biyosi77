@@ -9,10 +9,10 @@ from openpyxl import load_workbook
 from valuation.api import DataError, KIS, MarketData, Quote, choose_minute, credential
 from valuation.delivery import DeliveryError, Ledger
 from valuation.run import enforce_time, latest_scheduled_day
-from valuation.workbook import MAIN, RAW, build, records
+from valuation.workbook import MAIN, RAW, build, records, yoy, yoy_formula
 
 
-TEMPLATE = Path(__file__).parents[1] / "template" / "2027_valuation_20261015_close.xlsx"
+TEMPLATE = Path(__file__).parents[1] / "template" / "2027_valuation_20261016_yoy.xlsx"
 DAY = date(2026, 10, 15)
 
 
@@ -91,6 +91,20 @@ def test_reference_time_guard():
     assert latest_scheduled_day(datetime(2026, 10, 17, 13, 0, tzinfo=kst), "1130") == date(2026, 10, 16)
 
 
+def test_yoy_calculation_matches_new_template():
+    assert yoy(100, 125) == pytest.approx(0.25)
+    assert yoy(100, 0) == -1
+    assert yoy(100, -1) == "적자전환"
+    assert yoy(-100, 10) == "흑자전환"
+    assert yoy(-100, -50) == "적자지속"
+    assert yoy(0, 10) == "흑자전환"
+    assert yoy(0, 0) == "손익분기"
+    assert yoy(0, -10) == "미확인"
+    assert yoy(None, 10) == "미확인"
+    assert "F10" in yoy_formula("F", "G", 10)
+    assert "G10/F10-1" in yoy_formula("F", "G", 10)
+
+
 def test_calculation_code_mapping_sort_and_missing(tmp_path):
     original, rows = records(TEMPLATE)
     source = original[RAW]
@@ -104,25 +118,33 @@ def test_calculation_code_mapping_sort_and_missing(tmp_path):
     formulas = load_workbook(output, data_only=False)
     values = load_workbook(output, data_only=True)
     assert formulas.sheetnames == original.sheetnames
-    assert formulas[MAIN]["J9"].value == "27E ROE"
+    assert formulas[MAIN]["N9"].value == "27E ROE"
     assert formulas[MAIN]["D9"].value == "10/15 11:30 주가"
     assert formulas[RAW]["I9"].value == "10/15 11:30 주가"
-    assert formulas[RAW]["W9"].value == "예외 사유"
+    assert formulas[RAW]["AB9"].value == "예외 사유"
+    assert formulas[RAW]["T9"].value == original[RAW]["T9"].value
+    assert formulas[RAW].tables["SourceTable"].ref == "A9:AB99"
     assert missing in summary["missing"]
     ordered = [formulas[MAIN].cell(r, 3).value for r in range(10, 100)]
     assert ordered[-1] == missing or missing in ordered[-4:]
     row = 10 + ordered.index(missing)
     assert values[MAIN].cell(row, 4).value == "미확인"
     assert values[MAIN].cell(row, 5).value == "미산출"
-    assert values[MAIN].cell(row, 8).value == "미산출"
-    assert values[RAW].cell(rows[missing], 23).value == "no bar"
+    assert values[MAIN].cell(row, 12).value == "미산출"
+    assert values[RAW].cell(rows[missing], 28).value == "no bar"
     for code in rows:
         raw_row = rows[code]
         main_row = 10 + ordered.index(code)
-        assert values[MAIN].cell(main_row, 6).value == source.cell(raw_row, 4).value or (
-            source.cell(raw_row, 4).value is None and values[MAIN].cell(main_row, 6).value == "미확인")
-        assert formulas[MAIN].cell(main_row, 13).value == next(
-            original[MAIN].cell(r, 13).value for r in range(10, 100)
+        assert values[MAIN].cell(main_row, 6).value == source.cell(raw_row, 20).value or (
+            source.cell(raw_row, 20).value is None and values[MAIN].cell(main_row, 6).value == "미확인")
+        assert values[MAIN].cell(main_row, 7).value == source.cell(raw_row, 4).value or (
+            source.cell(raw_row, 4).value is None and values[MAIN].cell(main_row, 7).value == "미확인")
+        assert values[MAIN].cell(main_row, 14).value == source.cell(raw_row, 15).value or (
+            source.cell(raw_row, 15).value is None and values[MAIN].cell(main_row, 14).value == "미확인")
+        assert values[RAW].cell(raw_row, 20).value == source.cell(raw_row, 20).value
+        assert values[RAW].cell(raw_row, 24).value == source.cell(raw_row, 24).value
+        assert formulas[MAIN].cell(main_row, 17).value == next(
+            original[MAIN].cell(r, 17).value for r in range(10, 100)
             if original[MAIN].cell(r, 3).value == code)
 
 
