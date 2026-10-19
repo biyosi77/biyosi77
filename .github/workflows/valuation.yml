@@ -47,8 +47,8 @@ jobs:
     env:
       TZ: Asia/Seoul
       TRADE_DATE: ${{ github.event_name == 'push' && '2026-10-16' || inputs.trade_date }}
-      SLOT: ${{ github.event_name == 'push' && '1130' || inputs.slot }}
-      DRY_RUN: ${{ github.event_name == 'push' && 'true' || inputs.dry_run }}
+      SLOT: ${{ github.event_name == 'push' && 'close' || inputs.slot }}
+      DRY_RUN: ${{ github.event_name == 'push' && 'false' || inputs.dry_run }}
       TEST_SEND: ${{ github.event_name == 'push' && 'true' || inputs.test_send }}
       RESEND: ${{ github.event_name == 'push' && 'false' || inputs.resend }}
       OUTPUT_DIR: valuation-output
