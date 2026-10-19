@@ -37,6 +37,14 @@ def positive_int(value):
         return None
 
 
+def credential(name):
+    """Ignore accidental whitespace or wrapping quotes in a GitHub Secret."""
+    value = os.environ.get(name, "").strip()
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in ('"', "'"):
+        value = value[1:-1].strip()
+    return value
+
+
 def choose_minute(rows: list[dict], day: date):
     """Use the 11:30 KRX minute close, else the latest regular minute before it."""
     chosen = None
@@ -57,9 +65,9 @@ class MarketData:
         self.session = session or requests.Session()
         self.sleep = sleep
         self.token = None
-        self.app_key = os.environ.get("KIS_APP_KEY", "")
-        self.app_secret = os.environ.get("KIS_APP_SECRET", "")
-        self.krx_key = os.environ.get("KRX_API_KEY", "")
+        self.app_key = credential("KIS_APP_KEY")
+        self.app_secret = credential("KIS_APP_SECRET")
+        self.krx_key = credential("KRX_API_KEY")
         if not all((self.app_key, self.app_secret, self.krx_key)):
             raise DataError("KIS_APP_KEY, KIS_APP_SECRET, KRX_API_KEY 설정 필요")
 

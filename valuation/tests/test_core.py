@@ -6,7 +6,7 @@ import pytest
 import requests
 from openpyxl import load_workbook
 
-from valuation.api import DataError, KIS, MarketData, Quote, choose_minute
+from valuation.api import DataError, KIS, MarketData, Quote, choose_minute, credential
 from valuation.delivery import DeliveryError, Ledger
 from valuation.run import enforce_time, latest_scheduled_day
 from valuation.workbook import MAIN, RAW, build, records
@@ -45,6 +45,11 @@ def test_invalid_api_secret_is_not_retried_or_logged():
         client._request("POST", KIS + "/oauth2/tokenP", json={})
     assert client.session.calls == 1
     assert "sensitive" not in str(error.value)
+
+
+def test_secret_copy_format_is_trimmed(monkeypatch):
+    monkeypatch.setenv("KIS_APP_SECRET", '  "abc123"  ')
+    assert credential("KIS_APP_SECRET") == "abc123"
 
 
 def test_holiday_requires_exact_day_and_open_flag():
