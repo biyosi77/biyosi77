@@ -90,6 +90,7 @@ class MarketData:
                     # exposing the request URL, authorization header, or response body.
                     detail = f"HTTP {status}" if status else type(exc).__name__
                     response = getattr(exc, "response", None)
+                    code = ""
                     if response is not None and "json" in response.headers.get("Content-Type", ""):
                         try:
                             body = response.json()
@@ -98,6 +99,11 @@ class MarketData:
                                 detail += f", code {code}"
                         except (ValueError, AttributeError):
                             pass
+                    if service == "KIS token" and code == "EGW00133" and attempt == 0:
+                        # KIS limits token issuance to once per minute. A fresh
+                        # Actions runner cannot reuse the preceding run's token.
+                        self.sleep(65)
+                        continue
                     raise DataError(f"{service} request failed ({detail})") from None
                 self.sleep(2 ** attempt)
         raise DataError("market API retries exhausted")
@@ -193,19 +199,76 @@ class MarketData:
                                                 "FID_INPUT_ISCD": code})
         return positive_int(payload.get("output", {}).get("lstn_stcn"))
 
+    def daily_close(self, code, day):
+        """Exact-date, unadjusted KRX regular-session daily close from KIS."""
+        stamp = day.strftime("%Y%m%d")
+        payload = self.kis("/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice",
+                           "FHKST03010100", {"FID_COND_MRKT_DIV_CODE": "J",
+                           "FID_INPUT_ISCD": code, "FID_INPUT_DATE_1": stamp,
+                           "FID_INPUT_DATE_2": stamp, "FID_PERIOD_DIV_CODE": "D",
+                           "FID_ORG_ADJ_PRC": "1"})
+        rows = payload.get("output2", [])
+        matching = {positive_int(r.get("stck_clpr")) for r in rows
+                    if str(r.get("stck_bsop_date", "")) == stamp}
+        matching.discard(None)
+        if len(matching) > 1:
+            raise DataError("KIS conflicting same-day KRX daily closes")
+        return next(iter(matching)) if matching else None
+
     def collect(self, codes, day, slot):
         if slot == "close":
+            daily = {}
             for attempt in range(3):
-                daily = self.closes(day)
+                try:
+                    daily = self.closes(day)
+                except DataError as exc:
+                    if str(exc) != "KRX confirmed close dataset empty or not yet published":
+                        raise
+                    daily = {}
                 if all(c in daily and all(daily[c][0:2]) for c in codes) or attempt == 2:
                     break
                 self.sleep(10 * (attempt + 1))
-            checked = datetime.now(KST).isoformat(timespec="seconds")
-            return {code: Quote(*(daily[code][0:2]),
-                         source="KRX " + daily[code][2], basis="15:30 KST 정규장 종가",
-                         checked_at=checked) if code in daily and all(daily[code][0:2]) else
-                    Quote(None, None, "KRX", "", checked, "당일 확정 종가/상장주식 수 미확인")
-                    for code in codes}
+            if all(c in daily and all(daily[c][0:2]) for c in codes):
+                checked = datetime.now(KST).isoformat(timespec="seconds")
+                return {code: Quote(*(daily[code][0:2]),
+                             source="KRX " + daily[code][2], basis="15:30 KST 정규장 종가",
+                             checked_at=checked) for code in codes}
+            try:
+                shares = self.shares(day)
+            except DataError:
+                shares = {}
+            quotes = {}
+            for code in codes:
+                price, share, endpoint = daily.get(code, (None, None, ""))
+                if not price:
+                    try:
+                        price = self.daily_close(code, day)
+                    except DataError as exc:
+                        if "KIS token" in str(exc):
+                            raise
+                        price = None
+                if not share:
+                    share, share_endpoint = shares.get(code, (None, ""))
+                    if not share and day == datetime.now(KST).date():
+                        try:
+                            share = self.current_shares(code)
+                            share_endpoint = "KIS KRX 현재가 상장주식수(lstn_stcn)"
+                        except DataError:
+                            share = None
+                else:
+                    share_endpoint = endpoint
+                checked = datetime.now(KST).isoformat(timespec="seconds")
+                if price and share:
+                    price_source = "KRX " + endpoint if daily.get(code, (None,))[0] else "KIS KRX 일봉 원주가"
+                    shares_source = (share_endpoint if share_endpoint.startswith("KIS")
+                                     else "KRX " + share_endpoint)
+                    quotes[code] = Quote(price, share, price_source + "; " + shares_source,
+                                         "15:30 KST 정규장 종가", checked)
+                else:
+                    quotes[code] = Quote(None, None, "KRX; KIS KRX 일봉", "", checked,
+                                         "당일 정규장 종가/상장주식 수 미확인")
+                self.sleep(0.12)
+            return quotes
         shares = {}
         for attempt in range(3):
             try:

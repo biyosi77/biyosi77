@@ -14,6 +14,10 @@ from .delivery import DeliveryError, DuplicateDelivery, Ledger, Telegram
 from .workbook import build, records
 
 TEMPLATE = Path(__file__).parent / "template" / "2027_valuation_20261016_yoy.xlsx"
+NOON_CRONS = {"0 12 * * 1-5", "17 12 * * 1-5", "17 13 * * 1-5"}
+CLOSE_CRONS = {"0 16 * * 1-5", "17 16 * * 1-5", "17 18 * * 1-5"}
+PREVIOUS_CLOSE_CRONS = {"17 9 * * 1-6", "47 12 * * 1-6"}
+PRIMARY_CRONS = {"0 12 * * 1-5", "0 16 * * 1-5"}
 
 
 def flag(value):
@@ -31,12 +35,26 @@ def latest_scheduled_day(now, slot):
     return candidate
 
 
+def scheduled_target(now, cron):
+    if cron in NOON_CRONS:
+        return "1130", latest_scheduled_day(now, "1130")
+    if cron in CLOSE_CRONS:
+        return "close", latest_scheduled_day(now, "close")
+    if cron in PREVIOUS_CLOSE_CRONS:
+        candidate = now.date() - timedelta(days=1)
+        while candidate.weekday() >= 5:
+            candidate -= timedelta(days=1)
+        return "close", candidate
+    raise ValueError("unrecognized valuation schedule")
+
+
 def argument_parser():
     parser = argparse.ArgumentParser()
-    slot = os.getenv("SLOT", "")
     now = datetime.now(KST)
-    default_day = (latest_scheduled_day(now, slot) if os.getenv("GITHUB_EVENT_NAME") == "schedule"
-                   and slot in ("1130", "close") else now.date())
+    if os.getenv("GITHUB_EVENT_NAME") == "schedule":
+        slot, default_day = scheduled_target(now, os.getenv("SCHEDULE_CRON", ""))
+    else:
+        slot, default_day = os.getenv("SLOT", ""), now.date()
     parser.add_argument("--trade-date", default=os.getenv("TRADE_DATE") or default_day.isoformat())
     parser.add_argument("--slot", choices=("1130", "close"), default=os.getenv("SLOT", ""))
     parser.add_argument("--dry-run", action="store_true", default=flag(os.getenv("DRY_RUN", "false")))
@@ -82,11 +100,15 @@ def write_log(folder, name, data):
 def main(argv=None):
     args = argument_parser().parse_args(argv)
     folder = Path(args.output_dir)
+    schedule_cron = os.getenv("SCHEDULE_CRON", "") if os.getenv("GITHUB_EVENT_NAME") == "schedule" else ""
     log = {"trade_date": args.trade_date, "slot": args.slot,
            "dry_run": args.dry_run, "test_send": args.test_send,
            "fixture": args.fixture_template_prices,
            "started_at": datetime.now(KST).isoformat(timespec="seconds")}
+    if schedule_cron:
+        log["schedule_cron"] = schedule_cron
     claimed = False
+    ledger = None
     try:
         if args.fixture_template_prices and not args.dry_run:
             raise ValueError("fixture prices are allowed only in dry-run")
@@ -96,6 +118,13 @@ def main(argv=None):
         now = datetime.now(KST)
         if not args.fixture_template_prices:
             enforce_time(day, args.slot, now)
+        key = f"{day:%Y%m%d}_{args.slot}"
+        if not args.dry_run and not args.resend:
+            ledger = Ledger()
+            ledger.ensure_branch()
+            previous, _ = ledger.read(key)
+            if previous:
+                raise DuplicateDelivery(previous["status"])
         template, rows = records(TEMPLATE)
         if args.fixture_template_prices:
             quotes = fixture_quotes(template, rows)
@@ -127,8 +156,7 @@ def main(argv=None):
             return 0
         telegram = Telegram()
         telegram.check_permission()
-        ledger = Ledger()
-        key = f"{day:%Y%m%d}_{args.slot}"
+        ledger = ledger or Ledger()
         claim = ledger.claim(key, force=args.resend)
         claimed = True
         message_id = telegram.send_document(out, caption(day, args.slot, summary, args.test_send))
@@ -147,7 +175,8 @@ def main(argv=None):
         reason = str(exc)
         log.update({"status": "failed", "error": reason})
         write_log(folder, "run.json", log)
-        if not args.dry_run and not args.fixture_template_prices:
+        if (not args.dry_run and not args.fixture_template_prices
+                and (not schedule_cron or schedule_cron in PRIMARY_CRONS)):
             try:
                 Telegram().send_failure(args.trade_date, args.slot, reason, uncertain=claimed)
             except DeliveryError:

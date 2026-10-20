@@ -8,7 +8,7 @@ from openpyxl import load_workbook
 
 from valuation.api import DataError, KIS, MarketData, Quote, choose_minute, credential
 from valuation.delivery import DeliveryError, Ledger
-from valuation.run import enforce_time, latest_scheduled_day
+from valuation.run import enforce_time, latest_scheduled_day, scheduled_target
 from valuation.workbook import MAIN, RAW, build, records, yoy, yoy_formula
 
 
@@ -47,6 +47,29 @@ def test_invalid_api_secret_is_not_retried_or_logged():
     assert "sensitive" not in str(error.value)
 
 
+def test_kis_token_rate_limit_waits_once_then_retries():
+    class Session:
+        calls = 0
+        def request(self, *args, **kwargs):
+            self.calls += 1
+            response = requests.Response()
+            response.headers["Content-Type"] = "application/json"
+            if self.calls == 1:
+                response.status_code = 403
+                response._content = b'{"error_code":"EGW00133"}'
+            else:
+                response.status_code = 200
+                response._content = b'{"access_token":"ok"}'
+            return response
+    client = MarketData.__new__(MarketData)
+    client.session = Session()
+    waits = []
+    client.sleep = waits.append
+    assert client._request("POST", KIS + "/oauth2/tokenP") == {"access_token": "ok"}
+    assert client.session.calls == 2
+    assert waits == [65]
+
+
 def test_secret_copy_format_is_trimmed(monkeypatch):
     monkeypatch.setenv("KIS_APP_SECRET", '  "abc123"  ')
     assert credential("KIS_APP_SECRET") == "abc123"
@@ -82,6 +105,37 @@ def test_close_rejects_wrong_date():
         client.closes(DAY)
 
 
+def test_kis_close_fallback_requires_exact_day_and_krx_venue():
+    client = MarketData.__new__(MarketData)
+    calls = []
+    def fake_kis(path, tr_id, params):
+        calls.append((path, tr_id, params))
+        return {"output2": [
+            {"stck_bsop_date": "20261018", "stck_clpr": "999999"},
+            {"stck_bsop_date": "20261019", "stck_clpr": "105000"},
+        ]}
+    client.kis = fake_kis
+    day = date(2026, 10, 19)
+    assert client.daily_close("005930", day) == 105000
+    assert calls[0][2]["FID_COND_MRKT_DIV_CODE"] == "J"
+    assert calls[0][2]["FID_INPUT_DATE_1"] == calls[0][2]["FID_INPUT_DATE_2"] == "20261019"
+    assert calls[0][2]["FID_ORG_ADJ_PRC"] == "1"
+    client.kis = lambda *a: {"output2": [{"stck_bsop_date": "20261018", "stck_clpr": "999999"}]}
+    assert client.daily_close("005930", day) is None
+
+
+def test_close_uses_exact_date_kis_fallback_when_krx_daily_is_empty():
+    client = MarketData.__new__(MarketData)
+    client.closes = lambda day: (_ for _ in ()).throw(DataError("KRX confirmed close dataset empty or not yet published"))
+    client.shares = lambda day: {"005930": (5969782550, "stk_isu_base_info")}
+    client.daily_close = lambda code, day: 105000
+    client.sleep = lambda _: None
+    quote = client.collect(["005930"], date(2026, 10, 19), "close")["005930"]
+    assert quote.price == 105000 and quote.shares == 5969782550
+    assert "KIS KRX 일봉" in quote.source
+    assert quote.basis == "15:30 KST 정규장 종가"
+
+
 def test_reference_time_guard():
     kst = ZoneInfo("Asia/Seoul")
     with pytest.raises(ValueError):
@@ -89,6 +143,19 @@ def test_reference_time_guard():
     enforce_time(DAY, "1130", datetime(2026, 10, 15, 12, 0, tzinfo=kst))
     assert latest_scheduled_day(datetime(2026, 10, 16, 0, 30, tzinfo=kst), "close") == DAY
     assert latest_scheduled_day(datetime(2026, 10, 17, 13, 0, tzinfo=kst), "1130") == date(2026, 10, 16)
+
+
+def test_schedule_retry_targets_expected_trading_session():
+    kst = ZoneInfo("Asia/Seoul")
+    tuesday = datetime(2026, 10, 20, 12, 50, tzinfo=kst)
+    assert scheduled_target(tuesday, "17 12 * * 1-5") == ("1130", date(2026, 10, 20))
+    assert scheduled_target(tuesday, "47 12 * * 1-6") == ("close", date(2026, 10, 19))
+    assert scheduled_target(datetime(2026, 10, 24, 12, 50, tzinfo=kst),
+                            "47 12 * * 1-6") == ("close", date(2026, 10, 23))
+    assert scheduled_target(datetime(2026, 10, 20, 18, 20, tzinfo=kst),
+                            "17 18 * * 1-5") == ("close", date(2026, 10, 20))
+    with pytest.raises(ValueError, match="unrecognized"):
+        scheduled_target(tuesday, "unexpected")
 
 
 def test_yoy_calculation_matches_new_template():

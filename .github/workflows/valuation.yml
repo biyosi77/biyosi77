@@ -4,7 +4,19 @@ on:
   schedule:
     - cron: '0 12 * * 1-5'
       timezone: Asia/Seoul
+    - cron: '17 12 * * 1-5'
+      timezone: Asia/Seoul
+    - cron: '17 13 * * 1-5'
+      timezone: Asia/Seoul
     - cron: '0 16 * * 1-5'
+      timezone: Asia/Seoul
+    - cron: '17 16 * * 1-5'
+      timezone: Asia/Seoul
+    - cron: '17 18 * * 1-5'
+      timezone: Asia/Seoul
+    - cron: '17 9 * * 1-6'
+      timezone: Asia/Seoul
+    - cron: '47 12 * * 1-6'
       timezone: Asia/Seoul
   workflow_dispatch:
     inputs:
@@ -48,7 +60,8 @@ jobs:
     env:
       TZ: Asia/Seoul
       TRADE_DATE: ${{ inputs.trade_date }}
-      SLOT: ${{ github.event_name == 'schedule' && (github.event.schedule == '0 12 * * 1-5' && '1130' || 'close') || inputs.slot }}
+      SLOT: ${{ inputs.slot }}
+      SCHEDULE_CRON: ${{ github.event.schedule }}
       DRY_RUN: ${{ github.event_name == 'schedule' && 'false' || inputs.dry_run }}
       TEST_SEND: ${{ github.event_name == 'schedule' && 'false' || inputs.test_send }}
       RESEND: ${{ github.event_name == 'schedule' && 'false' || inputs.resend }}
