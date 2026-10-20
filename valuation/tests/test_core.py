@@ -1,4 +1,6 @@
 from datetime import date, datetime
+import json
+from math import isclose
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -8,11 +10,13 @@ from openpyxl import load_workbook
 
 from valuation.api import DataError, KIS, MarketData, Quote, choose_minute, credential
 from valuation.delivery import DeliveryError, Ledger
-from valuation.run import enforce_time, latest_scheduled_day, scheduled_target
+from valuation.run import caption, enforce_time, latest_scheduled_day, scheduled_target
 from valuation.workbook import MAIN, RAW, build, records, yoy, yoy_formula
 
 
-TEMPLATE = Path(__file__).parents[1] / "template" / "2027_valuation_20261016_yoy.xlsx"
+TEMPLATE = Path(__file__).parents[1] / "template" / "2027_valuation_20261020_133.xlsx"
+BASE_TEMPLATE = Path(__file__).parents[1] / "template" / "2027_valuation_20261016_yoy.xlsx"
+ADDITIONS = Path(__file__).parents[1] / "template" / "additions_20261020.json"
 DAY = date(2026, 10, 15)
 
 
@@ -174,12 +178,35 @@ def test_yoy_calculation_matches_new_template():
 
 def test_calculation_code_mapping_sort_and_missing(tmp_path):
     original, rows = records(TEMPLATE)
+    added = json.loads(ADDITIONS.read_text(encoding="utf-8"))["stocks"]
+    base, base_rows = records(BASE_TEMPLATE)
+    assert len(rows) == 133 and len(base_rows) == 90 and len(added) == 43
+    assert set(base_rows).issubset(rows)
+    assert {item["code"] for item in added} == set(rows) - set(base_rows)
+    for code, base_row in base_rows.items():
+        for col in range(1, 25):
+            actual = original[RAW].cell(rows[code], col).value
+            expected = base[RAW].cell(base_row, col).value
+            if isinstance(actual, (int, float)) and isinstance(expected, (int, float)):
+                assert isclose(actual, expected, rel_tol=0, abs_tol=1e-12)
+            else:
+                assert actual == expected
+    for item in added:
+        row = rows[item["code"]]
+        assert original[RAW].cell(row, 2).value == item["code"]
+        assert original[RAW].cell(row, 1).value == item["name"]
+        assert all(original[RAW].cell(row, col).value is None
+                   for col in (4, 5, 15, 20, 21))
+    assert original[MAIN].tables["ValuationTable"].ref == "A9:Q142"
     source = original[RAW]
     quotes = {code: Quote(source.cell(row, 9).value, source.cell(row, 10).value,
                           "fixture KRX", "11:30 KST", "2026-10-15T12:01:00+09:00")
               for code, row in rows.items()}
     missing = "005930"
     quotes[missing] = Quote(None, None, "fixture KRX", "", "2026-10-15T12:01:00+09:00", "no bar")
+    added_code = "078350"
+    quotes[added_code] = Quote(10_000, 20_000_000, "fixture KRX", "11:30 KST",
+                               "2026-10-15T12:01:00+09:00")
     output = tmp_path / "valuation_20261015_1130.xlsx"
     summary = build(TEMPLATE, output, DAY, "1130", quotes, test=True)
     formulas = load_workbook(output, data_only=False)
@@ -190,15 +217,24 @@ def test_calculation_code_mapping_sort_and_missing(tmp_path):
     assert formulas[RAW]["I9"].value == "10/15 11:30 주가"
     assert formulas[RAW]["AB9"].value == "예외 사유"
     assert formulas[RAW]["T9"].value == original[RAW]["T9"].value
-    assert formulas[RAW].tables["SourceTable"].ref == "A9:AB99"
+    assert formulas[RAW].tables["SourceTable"].ref == "A9:AB142"
+    assert summary["total_stocks"] == 133
+    assert "133종목" in caption(DAY, "1130", summary)
+    assert "27E PER/POR 미산출:" in caption(DAY, "1130", summary)
+    assert added_code in summary["uncomputed_per"]
     assert missing in summary["missing"]
-    ordered = [formulas[MAIN].cell(r, 3).value for r in range(10, 100)]
-    assert ordered[-1] == missing or missing in ordered[-4:]
+    ordered = [formulas[MAIN].cell(r, 3).value for r in range(10, 143)]
     row = 10 + ordered.index(missing)
+    assert values[MAIN].cell(row, 1).value == "미산출"
     assert values[MAIN].cell(row, 4).value == "미확인"
     assert values[MAIN].cell(row, 5).value == "미산출"
     assert values[MAIN].cell(row, 12).value == "미산출"
     assert values[RAW].cell(rows[missing], 28).value == "no bar"
+    added_row = 10 + ordered.index(added_code)
+    assert values[MAIN].cell(added_row, 5).value == 2000
+    assert values[MAIN].cell(added_row, 7).value == "미확인"
+    assert values[MAIN].cell(added_row, 12).value == "미산출"
+    assert values[MAIN].cell(added_row, 17).value == "추가 / 추정치 미제공"
     for code in rows:
         raw_row = rows[code]
         main_row = 10 + ordered.index(code)
@@ -211,7 +247,7 @@ def test_calculation_code_mapping_sort_and_missing(tmp_path):
         assert values[RAW].cell(raw_row, 20).value == source.cell(raw_row, 20).value
         assert values[RAW].cell(raw_row, 24).value == source.cell(raw_row, 24).value
         assert formulas[MAIN].cell(main_row, 17).value == next(
-            original[MAIN].cell(r, 17).value for r in range(10, 100)
+            original[MAIN].cell(r, 17).value for r in range(10, 143)
             if original[MAIN].cell(r, 3).value == code)
 
 

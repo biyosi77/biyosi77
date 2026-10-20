@@ -2,7 +2,7 @@
 
 > 운영 상태 (2026-10-20): 신규 YoY 양식 적용 후 10/19 11:30 예약은 17:20 KST에 지연 실행되어 90/90종목 전송에 성공했습니다. 10/19 종가 예약은 23:13 KST에 실행됐으나 KRX 일별 데이터가 비어 실패했습니다. 10/20 12:30 KST 재조회에서는 90/90종목이 확인되어 종가 보고서를 수동 전송했고 메시지 ID 157 및 전송 기록 `sent`를 확인했습니다. 10/20 정오 예약 이벤트는 12:30 KST까지 생성되지 않아 11:30 보고서를 수동 전송했고 메시지 ID 158 및 전송 기록 `sent`를 확인했습니다. 정시 예약과 별도 재확인 회차, KRX 일별 데이터가 없을 때 날짜·시장 검증을 거친 KIS KRX 일봉 대체 경로를 추가했습니다. 10/19 삼성전자 종가는 두 출처에서 218,000원으로 일치했습니다.
 
-`valuation/template/2027_valuation_20261016_yoy.xlsx`의 90종목과 새 26E·YoY 열을 기준으로 별도 보고서를 만듭니다. 이전 템플릿은 이력으로 보존합니다. 기존 유튜브 리포트의 `.github/workflows/daily_report.yml`, `main.py`, 루트 의존성은 수정하지 않습니다. 보고서는 `valuation_YYYYMMDD_1130.xlsx` 또는 `valuation_YYYYMMDD_close.xlsx`이며 원본 템플릿을 덮어쓰지 않습니다.
+`valuation/template/2027_valuation_20261020_133.xlsx`의 **133종목**과 26E·YoY 열을 기준으로 별도 보고서를 만듭니다. 기존 90종목 템플릿은 이력으로 보존했습니다. 2026-10-20에 요청받은 43종목의 코드와 시장은 [KRX 상장법인 목록](https://kind.krx.co.kr/corpgeneral/corpList.do?method=download)에서 대조했으며 매핑은 `valuation/template/additions_20261020.json`에 기록했습니다. 요청의 `한야이엔지`는 상장명 `한양이엔지`(045100)로, `삼화콘덴서`는 상장법인 `삼화콘덴서공업`(001820)의 종목 표시명으로 연결했습니다. `SFA`(056190)와 기존 `SFA반도체`(036540)는 각각 별도 종목입니다. 기존 유튜브 리포트의 `.github/workflows/daily_report.yml`, `main.py`, 루트 의존성은 수정하지 않습니다. 보고서는 `valuation_YYYYMMDD_1130.xlsx` 또는 `valuation_YYYYMMDD_close.xlsx`이며 원본 템플릿을 덮어쓰지 않습니다.
 
 ## 데이터와 계산
 
@@ -14,6 +14,8 @@
 | 상장주식 수 | 우선 KRX 해당 거래일 일별매매정보 또는 종목기본정보 `LIST_SHRS`. 당일 KRX 기본정보가 아직 없을 때에만 KIS `J` 현재가 응답 `lstn_stcn`을 사용하고 출처에 표시. 과거일 재실행에는 이 대체를 금지 |
 
 NXT·통합시세·시간외·전일 가격으로 대체하지 않습니다. 종목별 가격 또는 주식 수를 확인하지 못하면 `미확인`, 시가총액·PER·POR은 `미산출`로 표시합니다. 전체 수집 실패나 엑셀 검증 실패는 정상 보고서로 전송하지 않습니다. 원자료의 26E·27E 순이익·영업이익, ROE, 출처 및 메모를 보존합니다. 시가총액(억원) = 가격 × 상장주식 수 ÷ 100,000,000; PER = 시가총액 ÷ 27E 순이익; POR = 시가총액 ÷ 27E 영업이익입니다. 이익이 없거나 0 이하인 배수도 미산출입니다. 새 YoY 열은 템플릿의 수식과 흑자전환·적자전환·손익분기 규칙을 유지합니다. 원자료 T:X열은 신규 26E 추정치·출처 등이므로 보존하고, Y:AB열에 가격 출처·실제 기준시각·조회시각·예외 사유를 기록합니다. 모든 행은 종목코드 기준으로 연결하며 수식과 검증된 계산 캐시를 함께 저장합니다.
+
+추가한 43종목에는 사용자가 제공한 26E·27E 이익 추정치와 ROE가 없습니다. 해당 원자료 칸은 빈값으로 유지합니다. 가격과 상장주식 수가 조회되면 시가총액은 계산하지만, 이익 추정치가 필요한 PER·POR·YoY는 `미산출` 또는 `미확인`으로 표시합니다. 추정치나 ROE를 0으로 채우거나 자동 추측하지 않습니다. 추후 승인된 추정치를 템플릿의 해당 **종목코드 행**에 입력하면 다음 실행부터 계산됩니다. 템플릿은 `python -m valuation.template.expand_20261020`으로 기존 90종목 파일과 매핑 목록에서 재생성할 수 있습니다. 단, 직접 입력한 추정치가 있다면 재생성 전에 별도로 보존해야 합니다.
 
 KIS REST API의 `J` 시장 코드와 거래일 지정 분봉은 [한국투자증권 공식 예제](https://github.com/koreainvestment/open-trading-api/blob/main/examples_llm/domestic_stock/inquire_time_dailychartprice/inquire_time_dailychartprice.py)에, 날짜 지정 일봉 원주가는 [공식 예제](https://github.com/koreainvestment/open-trading-api/blob/main/examples_llm/domestic_stock/inquire_daily_itemchartprice/inquire_daily_itemchartprice.py)에, 휴장일 조회는 [공식 예제](https://github.com/koreainvestment/open-trading-api/blob/main/examples_llm/domestic_stock/chk_holiday/chk_holiday.py)에 나옵니다. KRX는 [유가증권 일별매매정보](https://openapi.krx.co.kr/contents/OPP/USES/service/OPPUSES002_S2.cmd?BO_ID=JvJFzlAENzZlPBDNGAWC), [코스닥 일별매매정보](https://openapi.krx.co.kr/contents/OPP/USES/service/OPPUSES002_S2.cmd?BO_ID=hZjGpkllgCBCWqeTsYFj), [유가증권 종목기본정보](https://openapi.krx.co.kr/contents/OPP/USES/service/OPPUSES002_S2.cmd?BO_ID=PiwgMdTwmsenXhmqqxuj), [코스닥 종목기본정보](https://openapi.krx.co.kr/contents/OPP/USES/service/OPPUSES002_S2.cmd?BO_ID=CifLHplnUFMgpHIMMPXs)를 사용합니다.
 

@@ -13,7 +13,7 @@ from .api import DataError, KST, MarketData, Quote
 from .delivery import DeliveryError, DuplicateDelivery, Ledger, Telegram
 from .workbook import build, records
 
-TEMPLATE = Path(__file__).parent / "template" / "2027_valuation_20261016_yoy.xlsx"
+TEMPLATE = Path(__file__).parent / "template" / "2027_valuation_20261020_133.xlsx"
 NOON_CRONS = {"0 12 * * 1-5", "17 12 * * 1-5", "17 13 * * 1-5"}
 CLOSE_CRONS = {"0 16 * * 1-5", "17 16 * * 1-5", "17 18 * * 1-5"}
 PREVIOUS_CLOSE_CRONS = {"17 9 * * 1-6", "47 12 * * 1-6"}
@@ -88,8 +88,9 @@ def caption(day, slot, summary, test=False):
               (f" 외 {len(missing)-12}종목" if len(missing) > 12 else ""))
     return (f"{'[테스트] ' if test else ''}2027 밸류에이션 {day.isoformat()}\n"
             f"가격 기준: {'11:30 KST 또는 그 이전 KRX 정규장 마지막 분봉(개별 실제시각은 원자료)' if slot == '1130' else '15:30 KST KRX 정규장 종가 (16:00 회차)'}\n"
-            f"가격·주식수 확인: {summary['successful_prices']}/90종목\n"
-            f"{'부분 누락 있음 — ' if missing else ''}미확인: {suffix}")
+            f"가격·주식수 확인: {summary['successful_prices']}/{summary['total_stocks']}종목\n"
+            f"27E PER/POR 미산출: {len(summary['uncomputed_per'])}/{len(summary['uncomputed_por'])}종목\n"
+            f"{'부분 누락 있음 — ' if missing else ''}가격·주식수 미확인: {suffix}")
 
 
 def write_log(folder, name, data):
@@ -144,7 +145,7 @@ def main(argv=None):
                         raise
                     time.sleep(10 * (attempt + 1))
             if not any(q.price is not None and q.shares is not None for q in quotes.values()):
-                raise DataError("all 90 market prices or listed share counts unavailable")
+                raise DataError(f"all {len(rows)} market prices or listed share counts unavailable")
         out = folder / f"valuation_{day:%Y%m%d}_{args.slot}.xlsx"
         summary = build(TEMPLATE, out, day, args.slot, quotes,
                         test=args.fixture_template_prices)

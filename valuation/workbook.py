@@ -11,11 +11,11 @@ from zipfile import ZipFile
 
 from openpyxl import load_workbook
 from openpyxl.worksheet.table import TableColumn
-from openpyxl.utils import get_column_letter
+from openpyxl.utils import range_boundaries
 
 from .api import Quote
 
-FIRST, LAST = 10, 99
+FIRST = 10
 MAIN, RAW = "2027 밸류에이션", "원자료"
 NS = {"m": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
 
@@ -25,14 +25,22 @@ def records(template):
     if workbook.sheetnames != [MAIN, RAW]:
         raise ValueError("template sheet structure changed")
     source, main = workbook[RAW], workbook[MAIN]
+    source_bounds = range_boundaries(source.tables["SourceTable"].ref)
+    main_bounds = range_boundaries(main.tables["ValuationTable"].ref)
+    if (source_bounds[:2] != (1, 9) or source_bounds[2] != 24
+            or main_bounds != (1, 9, 17, source_bounds[3])
+            or source_bounds[3] < FIRST):
+        raise ValueError("template stock table ranges changed")
+    last = source_bounds[3]
     codes = {}
-    for row in range(FIRST, LAST + 1):
+    for row in range(FIRST, last + 1):
         code = str(source.cell(row, 2).value or "")
         if len(code) != 6 or not code.isdigit() or code in codes:
             raise ValueError("source stock code missing or duplicated")
         codes[code] = row
-    if len(codes) != 90 or {str(main.cell(r, 3).value) for r in range(FIRST, LAST + 1)} != set(codes):
-        raise ValueError("template must contain the same 90 unique codes on both sheets")
+    main_codes = [str(main.cell(r, 3).value) for r in range(FIRST, last + 1)]
+    if len(main_codes) != len(set(main_codes)) or set(main_codes) != set(codes):
+        raise ValueError("template must contain the same unique codes on both sheets")
     return workbook, codes
 
 
@@ -101,10 +109,11 @@ def _set_cached_values(path, cache):
 def build(template, output, day: date, slot: str, quotes: dict[str, Quote], *, test=False):
     workbook, rows = records(template)
     main, source = workbook[MAIN], workbook[RAW]
+    last = max(rows.values())
     if set(quotes) != set(rows):
-        raise ValueError("quote mapping must include each of the 90 codes exactly once")
+        raise ValueError("quote mapping must include each template code exactly once")
     old_main = {str(main.cell(r, 3).value): [_snapshot(main.cell(r, c)) for c in range(1, 18)]
-                for r in range(FIRST, LAST + 1)}
+                for r in range(FIRST, last + 1)}
     profits = {code: (source.cell(r, 20).value, source.cell(r, 4).value,
                       source.cell(r, 21).value, source.cell(r, 5).value,
                       source.cell(r, 15).value) for code, r in rows.items()}
@@ -140,7 +149,7 @@ def build(template, output, day: date, slot: str, quotes: dict[str, Quote], *, t
     source.column_dimensions["AA"].width = 28
     source.column_dimensions["AB"].width = 38
     table = source.tables["SourceTable"]
-    table.ref = "A9:AB99"
+    table.ref = f"A9:AB{last}"
     if table.autoFilter is not None:
         table.autoFilter.ref = table.ref
     for column in range(25, 29):
@@ -177,25 +186,29 @@ def build(template, output, day: date, slot: str, quotes: dict[str, Quote], *, t
     workbook.save(output)
     _set_cached_values(output, cache)
     validate(template, output, quotes, per, por)
-    return {"successful_prices": sum(q.price is not None and q.shares is not None for q in quotes.values()),
+    return {"total_stocks": len(rows),
+            "successful_prices": sum(q.price is not None and q.shares is not None for q in quotes.values()),
             "missing": [code for code in ordered if quotes[code].price is None or quotes[code].shares is None],
-            "uncomputed_per": [code for code in ordered if per[code] is None]}
+            "uncomputed_per": [code for code in ordered if per[code] is None],
+            "uncomputed_por": [code for code in ordered if por[code] is None]}
 
 
 def validate(template, output, quotes, expected_per, expected_por):
     original, old_rows = records(template)
+    last = max(old_rows.values())
     current = load_workbook(output, data_only=False)
     cached = load_workbook(output, data_only=True)
     if current.sheetnames != original.sheetnames or current[MAIN].tables["ValuationTable"].ref != original[MAIN].tables["ValuationTable"].ref:
         raise ValueError("output sheet/table structure changed")
     raw = current[RAW]
     main = current[MAIN]
-    if raw.tables["SourceTable"].ref != "A9:AB99":
+    if raw.tables["SourceTable"].ref != f"A9:AB{last}":
         raise ValueError("source provenance table structure changed")
-    if {str(raw.cell(r, 2).value) for r in range(FIRST, LAST + 1)} != set(old_rows):
+    raw_codes = [str(raw.cell(r, 2).value) for r in range(FIRST, last + 1)]
+    if len(raw_codes) != len(set(raw_codes)) or set(raw_codes) != set(old_rows):
         raise ValueError("stock mapping changed")
-    main_codes = [str(main.cell(r, 3).value) for r in range(FIRST, LAST + 1)]
-    if len(set(main_codes)) != 90 or set(main_codes) != set(old_rows):
+    main_codes = [str(main.cell(r, 3).value) for r in range(FIRST, last + 1)]
+    if len(set(main_codes)) != len(old_rows) or set(main_codes) != set(old_rows):
         raise ValueError("output stock loss or duplication")
     for code, old_row in old_rows.items():
         for col in range(1, 25):
@@ -233,7 +246,7 @@ def validate(template, output, quotes, expected_per, expected_por):
                 raise ValueError("YoY calculation mismatch")
         if not all(main.cell(row, col).data_type == "f" for col in range(4, 15)):
             raise ValueError("valuation formula missing")
-        old_main_row = next(r for r in range(FIRST, LAST + 1) if str(original[MAIN].cell(r, 3).value) == code)
+        old_main_row = next(r for r in range(FIRST, last + 1) if str(original[MAIN].cell(r, 3).value) == code)
         for col in (2, 15, 16, 17):
             if main.cell(row, col).value != original[MAIN].cell(old_main_row, col).value:
                 raise ValueError("stock detail shifted after sorting")
