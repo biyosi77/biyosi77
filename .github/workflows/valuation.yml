@@ -2,21 +2,10 @@ name: KRX 2027 valuation
 
 on:
   schedule:
-    - cron: '0 12 * * 1-5'
-      timezone: Asia/Seoul
-    - cron: '17 12 * * 1-5'
-      timezone: Asia/Seoul
-    - cron: '17 13 * * 1-5'
-      timezone: Asia/Seoul
-    - cron: '0 16 * * 1-5'
-      timezone: Asia/Seoul
+    # One regular-session close per trading day; second run retries delivery.
     - cron: '17 16 * * 1-5'
       timezone: Asia/Seoul
     - cron: '17 18 * * 1-5'
-      timezone: Asia/Seoul
-    - cron: '17 9 * * 1-6'
-      timezone: Asia/Seoul
-    - cron: '47 12 * * 1-6'
       timezone: Asia/Seoul
   workflow_dispatch:
     inputs:
@@ -27,9 +16,9 @@ on:
       slot:
         description: '가격 회차'
         required: true
-        default: '1130'
+        default: 'close'
         type: choice
-        options: ['1130', '1500', 'close']
+        options: ['close']
       dry_run:
         description: '전송 없는 파일 생성·검증'
         required: true
@@ -60,7 +49,7 @@ jobs:
     env:
       TZ: Asia/Seoul
       TRADE_DATE: ${{ inputs.trade_date }}
-      SLOT: ${{ inputs.slot }}
+      SLOT: close
       SCHEDULE_CRON: ${{ github.event.schedule }}
       DRY_RUN: ${{ github.event_name == 'schedule' && 'false' || inputs.dry_run }}
       TEST_SEND: ${{ github.event_name == 'schedule' && 'false' || inputs.test_send }}

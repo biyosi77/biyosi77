@@ -14,10 +14,8 @@ from .delivery import DeliveryError, DuplicateDelivery, Ledger, Telegram
 from .workbook import build, records
 
 TEMPLATE = Path(__file__).parent / "template" / "2027_valuation_20261020_133.xlsx"
-NOON_CRONS = {"0 12 * * 1-5", "17 12 * * 1-5", "17 13 * * 1-5"}
-CLOSE_CRONS = {"0 16 * * 1-5", "17 16 * * 1-5", "17 18 * * 1-5"}
-PREVIOUS_CLOSE_CRONS = {"17 9 * * 1-6", "47 12 * * 1-6"}
-PRIMARY_CRONS = {"0 12 * * 1-5", "0 16 * * 1-5"}
+CLOSE_CRONS = {"17 16 * * 1-5", "17 18 * * 1-5"}
+PRIMARY_CRONS = {"17 16 * * 1-5"}
 
 
 def flag(value):
@@ -36,15 +34,8 @@ def latest_scheduled_day(now, slot):
 
 
 def scheduled_target(now, cron):
-    if cron in NOON_CRONS:
-        return "1130", latest_scheduled_day(now, "1130")
     if cron in CLOSE_CRONS:
         return "close", latest_scheduled_day(now, "close")
-    if cron in PREVIOUS_CLOSE_CRONS:
-        candidate = now.date() - timedelta(days=1)
-        while candidate.weekday() >= 5:
-            candidate -= timedelta(days=1)
-        return "close", candidate
     raise ValueError("unrecognized valuation schedule")
 
 
@@ -56,7 +47,7 @@ def argument_parser():
     else:
         slot, default_day = os.getenv("SLOT", ""), now.date()
     parser.add_argument("--trade-date", default=os.getenv("TRADE_DATE") or default_day.isoformat())
-    parser.add_argument("--slot", choices=("1130", "1500", "close"), default=os.getenv("SLOT", ""))
+    parser.add_argument("--slot", choices=("close",), default=slot or "close")
     parser.add_argument("--dry-run", action="store_true", default=flag(os.getenv("DRY_RUN", "false")))
     parser.add_argument("--test-send", action="store_true", default=flag(os.getenv("TEST_SEND", "false")))
     parser.add_argument("--resend", action="store_true", default=flag(os.getenv("RESEND", "false")))
@@ -111,6 +102,8 @@ def main(argv=None):
     claimed = False
     ledger = None
     try:
+        if args.slot != "close":
+            raise ValueError("only the KRX regular-session close slot is allowed")
         if args.fixture_template_prices and not args.dry_run:
             raise ValueError("fixture prices are allowed only in dry-run")
         if args.resend and (args.dry_run or os.getenv("GITHUB_EVENT_NAME") != "workflow_dispatch"):
@@ -120,6 +113,7 @@ def main(argv=None):
         if not args.fixture_template_prices:
             enforce_time(day, args.slot, now)
         key = f"{day:%Y%m%d}_{args.slot}"
+        log["ledger_key"] = key
         if not args.dry_run and not args.resend:
             ledger = Ledger()
             ledger.ensure_branch()

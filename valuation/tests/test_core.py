@@ -179,15 +179,41 @@ def test_reference_time_guard():
 
 def test_schedule_retry_targets_expected_trading_session():
     kst = ZoneInfo("Asia/Seoul")
-    tuesday = datetime(2026, 10, 20, 12, 50, tzinfo=kst)
-    assert scheduled_target(tuesday, "17 12 * * 1-5") == ("1130", date(2026, 10, 20))
-    assert scheduled_target(tuesday, "47 12 * * 1-6") == ("close", date(2026, 10, 19))
-    assert scheduled_target(datetime(2026, 10, 24, 12, 50, tzinfo=kst),
-                            "47 12 * * 1-6") == ("close", date(2026, 10, 23))
-    assert scheduled_target(datetime(2026, 10, 20, 18, 20, tzinfo=kst),
-                            "17 18 * * 1-5") == ("close", date(2026, 10, 20))
+    for cron in ("17 16 * * 1-5", "17 18 * * 1-5"):
+        assert scheduled_target(datetime(2026, 10, 28, 23, 5, tzinfo=kst), cron) == ("close", date(2026, 10, 28))
+        assert scheduled_target(datetime(2026, 10, 29, 1, 13, tzinfo=kst), cron) == ("close", date(2026, 10, 28))
     with pytest.raises(ValueError, match="unrecognized"):
-        scheduled_target(tuesday, "unexpected")
+        scheduled_target(datetime(2026, 10, 28, 18, 0, tzinfo=kst), "0 12 * * 1-5")
+
+
+def test_schedule_parser_keeps_resolved_close_with_empty_env(monkeypatch):
+    import valuation.run as run
+    class FrozenDateTime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return cls(2026, 10, 30, 1, 13, tzinfo=tz)
+    monkeypatch.setattr(run, "datetime", FrozenDateTime)
+    monkeypatch.setenv("GITHUB_EVENT_NAME", "schedule")
+    monkeypatch.setenv("SCHEDULE_CRON", "17 18 * * 1-5")
+    monkeypatch.setenv("SLOT", "")
+    monkeypatch.setenv("TRADE_DATE", "")
+    args = run.argument_parser().parse_args([])
+    assert (args.trade_date, args.slot) == ("2026-10-29", "close")
+
+
+def test_manual_nonclose_rejected_before_delivery(monkeypatch, tmp_path):
+    import valuation.run as run
+    monkeypatch.setenv("GITHUB_EVENT_NAME", "workflow_dispatch")
+    monkeypatch.setenv("SLOT", "1130")
+    monkeypatch.setenv("DRY_RUN", "true")
+    assert run.main(["--output-dir", str(tmp_path)]) == 1
+    assert json.loads((tmp_path / "run.json").read_text())["error"] == "only the KRX regular-session close slot is allowed"
+
+
+def test_empty_price_slot_cannot_fall_back_to_minute_data():
+    client = MarketData.__new__(MarketData)
+    with pytest.raises(DataError, match="invalid price slot"):
+        client.collect(["005930"], DAY, "")
 
 
 def test_yoy_calculation_matches_new_template():
@@ -301,3 +327,38 @@ def test_delivery_claim_blocks_rerun_and_marks_after_success():
         ledger.claim("20261015_1130")
     ledger.claim("20261015_1130", force=True)
     assert ledger.value["status"] == "sending"
+
+
+def test_close_delivery_uses_separate_key_and_blocks_retry(monkeypatch, tmp_path):
+    import valuation.run as run
+    values = {"20261029_": {"status": "sent", "telegram_message_id": 173}}
+    sends = []
+    class FakeLedger(Ledger):
+        def __init__(self): pass
+        def ensure_branch(self): pass
+        def read(self, key): return values.get(key), "sha"
+        def write(self, key, value, sha=None): values[key] = value
+    class FakeMarket:
+        def is_open(self, day): return True
+        def collect(self, rows, day, slot):
+            assert slot == "close"
+            return {code: Quote(10000, 1000000, "mock KRX daily", "15:30 KST 정규장 종가", "test") for code in rows}
+    class FakeTelegram:
+        def check_permission(self): pass
+        def send_document(self, path, text):
+            sends.append((path.name, text)); return 999
+    monkeypatch.setattr(run, "Ledger", FakeLedger)
+    monkeypatch.setattr(run, "MarketData", FakeMarket)
+    monkeypatch.setattr(run, "Telegram", FakeTelegram)
+    monkeypatch.setenv("GITHUB_EVENT_NAME", "workflow_dispatch")
+    monkeypatch.setenv("SLOT", "close")
+    monkeypatch.setenv("DRY_RUN", "false")
+    monkeypatch.setenv("RESEND", "false")
+    args = ["--trade-date", "2026-10-29", "--output-dir", str(tmp_path)]
+    assert run.main(args) == 0
+    assert values["20261029_close"]["status"] == "sent"
+    assert run.main(args) == 0
+    assert len(sends) == 1
+    log = json.loads((tmp_path / "run.json").read_text())
+    assert log["status"] == "duplicate_blocked"
+    assert log["ledger_key"] == "20261029_close"

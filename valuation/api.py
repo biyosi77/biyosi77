@@ -223,6 +223,8 @@ class MarketData:
         return next(iter(matching)) if matching else None
 
     def collect(self, codes, day, slot):
+        if slot not in ("1130", "1500", "close"):
+            raise DataError("invalid price slot")
         if slot == "close":
             daily = {}
             for attempt in range(3):
