@@ -29,7 +29,7 @@ on:
         required: true
         default: '1130'
         type: choice
-        options: ['1130', 'close']
+        options: ['1130', '1500', 'close']
       dry_run:
         description: '전송 없는 파일 생성·검증'
         required: true

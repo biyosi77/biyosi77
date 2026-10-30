@@ -32,6 +32,17 @@ def test_price_time_selects_latest_prior_bar_on_requested_day():
     assert choose_minute(bars[:2], DAY) is None
 
 
+def test_1500_price_uses_exact_bar_and_rejects_later_or_previous_day():
+    bars = [
+        {"stck_bsop_date": "20261014", "stck_cntg_hour": "150000", "stck_prpr": "999"},
+        {"stck_bsop_date": "20261015", "stck_cntg_hour": "145900", "stck_prpr": "101"},
+        {"stck_bsop_date": "20261015", "stck_cntg_hour": "150000", "stck_prpr": "102"},
+        {"stck_bsop_date": "20261015", "stck_cntg_hour": "150100", "stck_prpr": "888"},
+    ]
+    assert choose_minute(bars, DAY, "150000") == ("150000", 102)
+    assert choose_minute(bars[:2], DAY, "150000") == ("145900", 101)
+
+
 def test_invalid_api_secret_is_not_retried_or_logged():
     class Session:
         calls = 0
@@ -99,6 +110,8 @@ def test_minute_request_is_krx_venue_and_requested_day():
     assert calls[0][2]["FID_COND_MRKT_DIV_CODE"] == "J"
     assert calls[0][2]["FID_INPUT_DATE_1"] == "20261015"
     assert calls[0][2]["FID_INPUT_HOUR_1"] == "113000"
+    client.minute("005930", DAY, "150000")
+    assert calls[-1][2]["FID_INPUT_HOUR_1"] == "150000"
 
 
 def test_close_rejects_wrong_date():

@@ -34,7 +34,9 @@ GitHub Actions의 [공식 예약 문법](https://docs.github.com/en/actions/refe
 
 지연 실행에서도 지정 회차의 분봉 또는 날짜가 일치하는 정규장 종가만 사용합니다. GitHub 예약 이벤트는 예정 날짜를 별도로 전달하지 않으므로 **다음 동일 회차 예약까지 넘는 장기 지연**은 원래 날짜를 확정할 수 없습니다. 이 경우 실행 기록을 확인하고 누락일을 수동 지정해야 합니다. 한국 증시 휴장일에는 생성·전송을 건너뜁니다. GitHub 예약은 정확한 분 단위 실행을 보장하지 않으며, 재확인 회차도 지연·누락될 수 있습니다.
 
-**Actions → KRX 2027 valuation → Run workflow**에서 `trade_date`(YYYY-MM-DD, 비우면 KST 오늘), `slot`(`1130`/`close`)을 지정할 수 있습니다. 기본 `dry_run=true`는 파일 생성·검증만 하고 텔레그램으로 보내지 않습니다. 실제 시험 전송은 `dry_run=false`, `test_send=true`로 실행하면 메시지에 `[테스트]`가 붙습니다. `resend=true`는 기존 전송 기록을 확인한 뒤에만 명시적으로 사용하세요. 과거 날짜의 11:30 분봉은 KIS 제공 가능 기간에 제한될 수 있으며, 없으면 미확인 처리합니다.
+**Actions → KRX 2027 valuation → Run workflow**에서 `trade_date`(YYYY-MM-DD, 비우면 KST 오늘), `slot`(`1130`/`1500`/`close`)을 지정할 수 있습니다. 기본 `dry_run=true`는 파일 생성·검증만 하고 텔레그램으로 보내지 않습니다. 실제 시험 전송은 `dry_run=false`, `test_send=true`로 실행하면 메시지에 `[테스트]`가 붙습니다. `resend=true`는 기존 전송 기록을 확인한 뒤에만 명시적으로 사용하세요. 과거 날짜의 11:30 분봉은 KIS 제공 가능 기간에 제한될 수 있으며, 없으면 미확인 처리합니다.
+
+긴급 수동 보고서가 필요할 때는 `slot=1500`도 선택할 수 있습니다. 해당 날짜 KRX 정규장 **15:00 분봉 종가**를 우선 사용하고 없으면 그 이전 마지막 정규장 분봉의 실제 시각을 원자료에 기록합니다. 이 옵션은 예약 실행에 추가되지 않으며 결과 파일명은 `valuation_YYYYMMDD_1500.xlsx`입니다.
 
 각 실행의 검증된 엑셀과 비밀정보 없는 `run.json`은 해당 실행의 **Artifacts**에 저장됩니다. 워크플로 실패 시에도 만들어진 파일과 로그는 업로드를 시도합니다. 로컬에서는 `pip install -r valuation/requirements.txt` 후 `python -m pytest valuation/tests -q`로 핵심 테스트를 실행할 수 있습니다. `python -m valuation.run --trade-date 2026-10-16 --slot close --dry-run --fixture-template-prices`는 **원본 템플릿 값만 사용하는 테스트**로, 실거래 시세 검증이 아닙니다. 생성 파일에 `테스트 / 실제 시세 검증 없음`이 표시됩니다.
 

@@ -45,14 +45,14 @@ def credential(name):
     return value
 
 
-def choose_minute(rows: list[dict], day: date):
-    """Use the 11:30 KRX minute close, else the latest regular minute before it."""
+def choose_minute(rows: list[dict], day: date, cutoff: str = "113000"):
+    """Use the requested KRX minute close, else the latest regular minute before it."""
     chosen = None
     for row in rows:
         stamp = str(row.get("stck_cntg_hour", ""))
         if str(row.get("stck_bsop_date", "")) != day.strftime("%Y%m%d"):
             continue
-        if not (len(stamp) == 6 and stamp.isdigit() and "090000" <= stamp <= "113000"):
+        if not (len(stamp) == 6 and stamp.isdigit() and "090000" <= stamp <= cutoff):
             continue
         price = positive_int(row.get("stck_prpr"))
         if price is not None and (chosen is None or stamp > chosen[0]):
@@ -185,10 +185,10 @@ class MarketData:
             raise DataError("KRX confirmed close dataset empty or not yet published")
         return result
 
-    def minute(self, code, day):
+    def minute(self, code, day, cutoff="113000"):
         payload = self.kis("/uapi/domestic-stock/v1/quotations/inquire-time-dailychartprice",
                            "FHKST03010230", {"FID_COND_MRKT_DIV_CODE": "J",
-                           "FID_INPUT_ISCD": code, "FID_INPUT_HOUR_1": "113000",
+                           "FID_INPUT_ISCD": code, "FID_INPUT_HOUR_1": cutoff,
                            "FID_INPUT_DATE_1": day.strftime("%Y%m%d"),
                            "FID_PW_DATA_INCU_YN": "N", "FID_FAKE_TICK_INCU_YN": ""})
         return choose_minute(payload.get("output2", []), day)
@@ -284,7 +284,7 @@ class MarketData:
             minute_error = ""
             for attempt in range(3):
                 try:
-                    minute = self.minute(code, day)
+                    minute = self.minute(code, day, "150000" if slot == "1500" else "113000")
                 except DataError as exc:
                     minute = None
                     minute_error = str(exc)
@@ -305,6 +305,6 @@ class MarketData:
                     f"{minute[0][:2]}:{minute[0][2:4]} KST", checked)
             else:
                 quotes[code] = Quote(None, None, "KIS KRX; KRX", "", checked,
-                    (minute_error or "당일 11:30 이전 정규장 분봉 없음") if not minute else "상장주식 수 미확인")
+                    (minute_error or f"당일 {'15:00' if slot == '1500' else '11:30'} 이전 정규장 분봉 없음") if not minute else "상장주식 수 미확인")
             self.sleep(0.12)
         return quotes

@@ -124,9 +124,9 @@ def build(template, output, day: date, slot: str, quotes: dict[str, Quote], *, t
     ordered = sorted(rows, key=lambda c: (per[c] is None,
                                          per[c] if per[c] is not None else float("inf"), c))
     mmdd = day.strftime("%m/%d")
-    label = mmdd + (" 11:30 주가" if slot == "1130" else " 종가")
+    label = mmdd + (" 11:30 주가" if slot == "1130" else " 15:00 주가" if slot == "1500" else " 종가")
     main["D9"], source["I9"] = label, label
-    main["A3"] = f"{day.isoformat()} {'11:30' if slot == '1130' else 'KRX 정규장 종가'} 기준(KST). 금액: 억원, 주가: 원, 배수: 배."
+    main["A3"] = f"{day.isoformat()} {'11:30' if slot == '1130' else '15:00' if slot == '1500' else 'KRX 정규장 종가'} 기준(KST). 금액: 억원, 주가: 원, 배수: 배."
     main["A5"] = "PER = 시가총액 / 27E 순이익. POR = 시가총액 / 27E 영업이익. 시가총액 = 당일 기준 주가 × 확인된 상장주식 수. 26E·27E 추정치와 YoY 기준은 원본을 따름."
     source["A4"] = f"{day.isoformat()} {label} 기준. KRX 정규장만 사용하며 NXT·시간외·전일 가격은 제외."
     if test:

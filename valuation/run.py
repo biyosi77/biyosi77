@@ -56,7 +56,7 @@ def argument_parser():
     else:
         slot, default_day = os.getenv("SLOT", ""), now.date()
     parser.add_argument("--trade-date", default=os.getenv("TRADE_DATE") or default_day.isoformat())
-    parser.add_argument("--slot", choices=("1130", "close"), default=os.getenv("SLOT", ""))
+    parser.add_argument("--slot", choices=("1130", "1500", "close"), default=os.getenv("SLOT", ""))
     parser.add_argument("--dry-run", action="store_true", default=flag(os.getenv("DRY_RUN", "false")))
     parser.add_argument("--test-send", action="store_true", default=flag(os.getenv("TEST_SEND", "false")))
     parser.add_argument("--resend", action="store_true", default=flag(os.getenv("RESEND", "false")))
@@ -69,7 +69,7 @@ def enforce_time(day, slot, now):
     if day > now.date():
         raise ValueError("future trade date is not allowed")
     if day == now.date():
-        threshold = clock_time(11, 35) if slot == "1130" else clock_time(16, 0)
+        threshold = clock_time(11, 35) if slot == "1130" else clock_time(15, 2) if slot == "1500" else clock_time(16, 0)
         if now.time() < threshold:
             raise ValueError("price basis time has not been reached")
 
@@ -87,7 +87,7 @@ def caption(day, slot, summary, test=False):
     suffix = ("없음" if not missing else ", ".join(missing[:12]) +
               (f" 외 {len(missing)-12}종목" if len(missing) > 12 else ""))
     return (f"{'[테스트] ' if test else ''}2027 밸류에이션 {day.isoformat()}\n"
-            f"가격 기준: {'11:30 KST 또는 그 이전 KRX 정규장 마지막 분봉(개별 실제시각은 원자료)' if slot == '1130' else '15:30 KST KRX 정규장 종가 (16:00 회차)'}\n"
+            f"가격 기준: {'11:30 KST 또는 그 이전 KRX 정규장 마지막 분봉(개별 실제시각은 원자료)' if slot == '1130' else '15:00 KST 또는 그 이전 KRX 정규장 마지막 분봉(개별 실제시각은 원자료)' if slot == '1500' else '15:30 KST KRX 정규장 종가 (16:00 회차)'}\n"
             f"가격·주식수 확인: {summary['successful_prices']}/{summary['total_stocks']}종목\n"
             f"27E PER/POR 미산출: {len(summary['uncomputed_per'])}/{len(summary['uncomputed_por'])}종목\n"
             f"{'부분 누락 있음 — ' if missing else ''}가격·주식수 미확인: {suffix}")
