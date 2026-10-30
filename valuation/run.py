@@ -5,13 +5,14 @@ import argparse
 import json
 import os
 import sys
-import time
 from datetime import date, datetime, time as clock_time, timedelta
 from pathlib import Path
 
+from openpyxl import load_workbook
+
 from .api import DataError, KST, MarketData, Quote
 from .delivery import DeliveryError, DuplicateDelivery, Ledger, Telegram
-from .workbook import build, records
+from .workbook import MAIN, RAW, build, records
 
 TEMPLATE = Path(__file__).parent / "template" / "2027_valuation_20261020_133.xlsx"
 CLOSE_CRONS = {"17 16 * * 1-5", "17 18 * * 1-5"}
@@ -89,6 +90,42 @@ def write_log(folder, name, data):
     (folder / name).write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
+def verify_close_quotes(quotes, codes, day):
+    if set(quotes) != set(codes):
+        raise DataError("close verification failed: stock universe mismatch")
+    for q in quotes.values():
+        if (q.trade_date != day.isoformat() or q.basis != "15:30 KST 정규장 종가"
+                or q.source not in ("KRX stk_bydd_trd", "KRX ksq_bydd_trd")
+                or q.price is None or q.price <= 0 or q.shares is None or q.shares <= 0):
+            raise DataError("close verification failed: date, session, source or value mismatch")
+
+
+def verify_close_file(path, rows, quotes, day):
+    workbook = load_workbook(path, data_only=True)
+    try:
+        raw = workbook[RAW]
+        if (not str(workbook[MAIN]["A3"].value).startswith(day.isoformat())
+                or not str(raw["A4"].value).startswith(day.isoformat())):
+            raise DataError("workbook trade date mismatch")
+        for code, row in rows.items():
+            q = quotes[code]
+            if (str(raw.cell(row, 2).value) != code
+                    or raw.cell(row, 9).value != q.price
+                    or raw.cell(row, 10).value != q.shares
+                    or raw.cell(row, 25).value != q.source
+                    or raw.cell(row, 26).value != q.basis):
+                raise DataError("workbook close evidence mismatch")
+    finally:
+        workbook.close()
+
+
+def verify_send_day(day):
+    now = datetime.now(KST)
+    if day != now.date():
+        raise ValueError("live delivery requires today's KST trade date")
+    enforce_time(day, "close", now)
+
+
 def main(argv=None):
     args = argument_parser().parse_args(argv)
     folder = Path(args.output_dir)
@@ -110,13 +147,19 @@ def main(argv=None):
             raise ValueError("resend requires an explicit manual send run")
         day = date.fromisoformat(args.trade_date)
         now = datetime.now(KST)
+        if schedule_cron and (day != now.date() or now.weekday() >= 5):
+            log["status"] = "stale_schedule_skipped"
+            write_log(folder, "run.json", log)
+            print(json.dumps(log, ensure_ascii=False))
+            return 0
+        if not args.dry_run:
+            verify_send_day(day)
         if not args.fixture_template_prices:
             enforce_time(day, args.slot, now)
         key = f"{day:%Y%m%d}_{args.slot}"
         log["ledger_key"] = key
         if not args.dry_run and not args.resend:
             ledger = Ledger()
-            ledger.ensure_branch()
             previous, _ = ledger.read(key)
             if previous:
                 raise DuplicateDelivery(previous["status"])
@@ -126,25 +169,21 @@ def main(argv=None):
         else:
             market = MarketData()
             if not market.is_open(day):
+                if not args.dry_run:
+                    ledger = ledger or Ledger()
+                    ledger.ensure_branch()
+                    previous, sha = ledger.read(key)
+                    if not previous:
+                        ledger.write(key, {"status": "market_closed", "trade_date": day.isoformat()}, sha)
                 log["status"] = "market_closed"
                 write_log(folder, "run.json", log)
                 print("KRX market closed; skipped")
                 return 0
-            for attempt in range(3):
-                try:
-                    quotes = market.collect(rows, day, args.slot)
-                    break
-                except DataError:
-                    if attempt == 2:
-                        raise
-                    time.sleep(10 * (attempt + 1))
-            if not any(q.price is not None and q.shares is not None for q in quotes.values()):
-                raise DataError(f"all {len(rows)} market prices or listed share counts unavailable")
-            if args.slot == "1500":
-                timely = sum(q.price is not None and q.shares is not None
-                             and q.basis >= "14:50 KST" for q in quotes.values())
-                if timely < max(1, len(rows) // 2):
-                    raise DataError(f"15:00 KRX minute dataset not confirmed ({timely}/{len(rows)} timely prices)")
+            quotes = market.collect_verified_close(rows, day)
+            verify_close_quotes(quotes, rows, day)
+            log["price_verification"] = {"trade_date": day.isoformat(),
+                                         "basis": "15:30 KST 정규장 종가",
+                                         "verified_stocks": len(quotes), "passed": True}
         out = folder / f"valuation_{day:%Y%m%d}_{args.slot}.xlsx"
         summary = build(TEMPLATE, out, day, args.slot, quotes,
                         test=args.fixture_template_prices)
@@ -154,11 +193,15 @@ def main(argv=None):
         if args.dry_run:
             print(json.dumps(log, ensure_ascii=False))
             return 0
+        verify_close_quotes(quotes, rows, day)
+        verify_close_file(out, rows, quotes, day)
+        verify_send_day(day)
         telegram = Telegram()
         telegram.check_permission()
         ledger = ledger or Ledger()
         claim = ledger.claim(key, force=args.resend)
         claimed = True
+        verify_send_day(day)
         message_id = telegram.send_document(out, caption(day, args.slot, summary, args.test_send))
         ledger.complete(key, claim, message_id)
         log.update({"status": "sent", "telegram_message_id": message_id})
@@ -169,7 +212,7 @@ def main(argv=None):
         log.update({"status": "duplicate_blocked", "ledger_status": exc.status})
         write_log(folder, "run.json", log)
         print(json.dumps(log, ensure_ascii=False))
-        return 0 if exc.status == "sent" else 1
+        return 0 if exc.status in ("sent", "market_closed") else 1
     except (ValueError, DataError, DeliveryError, OSError) as exc:
         # Error classes/messages are intentionally narrow. Do not log request URLs or tokens.
         reason = str(exc)

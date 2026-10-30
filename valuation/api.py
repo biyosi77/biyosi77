@@ -27,6 +27,7 @@ class Quote:
     basis: str
     checked_at: str
     reason: str = ""
+    trade_date: str = ""
 
 
 def positive_int(value):
@@ -78,7 +79,9 @@ class MarketData:
             try:
                 response = self.session.request(method, url, headers=headers, params=params,
                                                 json=json, timeout=(5, 15))
-                if response.status_code in (429, 500, 502, 503, 504) and attempt < 2:
+                if response.status_code == 429:
+                    raise DataError(f"{service} rate limited; defer to next scheduled attempt")
+                if response.status_code in (500, 502, 503, 504) and attempt < 2:
                     self.sleep(2 ** attempt)
                     continue
                 response.raise_for_status()
@@ -221,6 +224,18 @@ class MarketData:
         if len(matching) > 1:
             raise DataError("KIS conflicting same-day KRX daily closes")
         return next(iter(matching)) if matching else None
+
+    def collect_verified_close(self, codes, day):
+        """Two market-wide daily requests; never substitute minute/current prices."""
+        daily = self.closes(day)  # BAS_DD must match day for every accepted row.
+        missing = [code for code in codes
+                   if code not in daily or not all(daily[code][:2])]
+        if missing:
+            raise DataError(f"confirmed KRX close/share data incomplete ({len(missing)}/{len(codes)})")
+        checked = datetime.now(KST).isoformat(timespec="seconds")
+        return {code: Quote(daily[code][0], daily[code][1],
+                            "KRX " + daily[code][2], "15:30 KST 정규장 종가",
+                            checked, trade_date=day.isoformat()) for code in codes}
 
     def collect(self, codes, day, slot):
         if slot not in ("1130", "1500", "close"):

@@ -333,6 +333,11 @@ def test_close_delivery_uses_separate_key_and_blocks_retry(monkeypatch, tmp_path
     import valuation.run as run
     values = {"20261029_": {"status": "sent", "telegram_message_id": 173}}
     sends = []
+    market_calls = []
+    class FrozenDateTime(datetime):
+        @classmethod
+        def now(cls, tz=None): return cls(2026, 10, 29, 18, 0, tzinfo=tz)
+    monkeypatch.setattr(run, "datetime", FrozenDateTime)
     class FakeLedger(Ledger):
         def __init__(self): pass
         def ensure_branch(self): pass
@@ -340,9 +345,9 @@ def test_close_delivery_uses_separate_key_and_blocks_retry(monkeypatch, tmp_path
         def write(self, key, value, sha=None): values[key] = value
     class FakeMarket:
         def is_open(self, day): return True
-        def collect(self, rows, day, slot):
-            assert slot == "close"
-            return {code: Quote(10000, 1000000, "mock KRX daily", "15:30 KST 정규장 종가", "test") for code in rows}
+        def collect_verified_close(self, rows, day):
+            market_calls.append(day)
+            return {code: Quote(10000, 1000000, "KRX stk_bydd_trd", "15:30 KST 정규장 종가", "test", trade_date=day.isoformat()) for code in rows}
     class FakeTelegram:
         def check_permission(self): pass
         def send_document(self, path, text):
@@ -357,8 +362,87 @@ def test_close_delivery_uses_separate_key_and_blocks_retry(monkeypatch, tmp_path
     args = ["--trade-date", "2026-10-29", "--output-dir", str(tmp_path)]
     assert run.main(args) == 0
     assert values["20261029_close"]["status"] == "sent"
+    _, rows = records(TEMPLATE)
+    quotes = FakeMarket().collect_verified_close(rows, date(2026, 10, 29))
+    market_calls.pop()  # verification fixture is not a production collection
+    output = tmp_path / "valuation_20261029_close.xlsx"
+    workbook = load_workbook(output)
+    workbook[RAW]["A4"] = "2026-10-28 stale date"
+    workbook.save(output)
+    with pytest.raises(DataError, match="trade date mismatch"):
+        run.verify_close_file(output, rows, quotes, date(2026, 10, 29))
     assert run.main(args) == 0
     assert len(sends) == 1
+    assert len(market_calls) == 1
     log = json.loads((tmp_path / "run.json").read_text())
     assert log["status"] == "duplicate_blocked"
     assert log["ledger_key"] == "20261029_close"
+
+
+@pytest.mark.parametrize('field,value', [('trade_date','2026-10-28'), ('basis','11:30 KST'), ('price',None), ('source','KIS KRX 분봉')])
+def test_close_verification_rejects_unverified_quotes(field, value):
+    from dataclasses import replace
+    from valuation.run import verify_close_quotes
+    day = date(2026, 10, 29)
+    q = Quote(100, 1000, 'KRX stk_bydd_trd', '15:30 KST 정규장 종가', 'test', trade_date=day.isoformat())
+    with pytest.raises(DataError, match='verification failed'):
+        verify_close_quotes({'005930': replace(q, **{field: value})}, ['005930'], day)
+
+
+def test_verified_close_is_two_bulk_requests_and_checks_response_date():
+    client = MarketData.__new__(MarketData)
+    calls = []
+    def krx(endpoint, day):
+        calls.append(endpoint)
+        return [{'ISU_SRT_CD': '005930', 'BAS_DD': '20261029', 'TDD_CLSPRC': '100', 'LIST_SHRS': '1000'}] if endpoint == 'stk_bydd_trd' else []
+    client.krx = krx
+    quotes = client.collect_verified_close(['005930'], date(2026, 10, 29))
+    assert quotes['005930'].trade_date == '2026-10-29'
+    assert calls == ['stk_bydd_trd', 'ksq_bydd_trd']
+    with pytest.raises(DataError, match='empty or not yet published'):
+        client.collect_verified_close(['005930'], date(2026, 10, 30))
+    with pytest.raises(DataError, match='incomplete'):
+        client.collect_verified_close(['005930','000660'], date(2026, 10, 29))
+
+
+def test_rate_limit_stops_without_request_retry():
+    class Session:
+        calls = 0
+        def request(self, *args, **kwargs):
+            self.calls += 1
+            response = requests.Response(); response.status_code = 429
+            return response
+    client = MarketData.__new__(MarketData)
+    client.session = Session()
+    client.sleep = lambda _: pytest.fail('must not retry rate limit')
+    with pytest.raises(DataError, match='rate limited'):
+        client._request('GET', 'https://data-dbg.krx.co.kr/test')
+    assert client.session.calls == 1
+
+
+def test_stale_schedule_skips_before_market_or_ledger(monkeypatch, tmp_path):
+    import valuation.run as run
+    class FrozenDateTime(datetime):
+        @classmethod
+        def now(cls, tz=None): return cls(2026, 10, 30, 1, 13, tzinfo=tz)
+    monkeypatch.setattr(run, 'datetime', FrozenDateTime)
+    monkeypatch.setenv('GITHUB_EVENT_NAME', 'schedule')
+    monkeypatch.setenv('SCHEDULE_CRON', '17 18 * * 1-5')
+    monkeypatch.setenv('TRADE_DATE', '')
+    monkeypatch.setenv('DRY_RUN', 'false')
+    monkeypatch.setattr(run, 'MarketData', lambda: pytest.fail('no market access'))
+    monkeypatch.setattr(run, 'Ledger', lambda: pytest.fail('no ledger access'))
+    assert run.main(['--output-dir', str(tmp_path)]) == 0
+    assert json.loads((tmp_path/'run.json').read_text())['status'] == 'stale_schedule_skipped'
+
+
+def test_live_delivery_rejects_yesterday_and_before_close(monkeypatch):
+    import valuation.run as run
+    class FrozenDateTime(datetime):
+        @classmethod
+        def now(cls, tz=None): return cls(2026, 10, 30, 15, 0, tzinfo=tz)
+    monkeypatch.setattr(run, 'datetime', FrozenDateTime)
+    with pytest.raises(ValueError, match="today"):
+        run.verify_send_day(date(2026, 10, 29))
+    with pytest.raises(ValueError, match='not been reached'):
+        run.verify_send_day(date(2026, 10, 30))
