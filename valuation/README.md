@@ -4,6 +4,8 @@
 
 > 133종목 확장 검증: [2026-10-20 11:30 회차 GitHub Actions dry-run](https://github.com/biyosi77/biyosi77/actions/runs/39376186171)에서 실제 KIS·KRX 자료로 **133/133종목 가격·주식 수 확인**, 파일 생성 및 검증에 성공했습니다. 이 실행은 텔레그램으로 보내지 않았습니다. PER·POR 미산출 46종목에는 추정치를 받지 않은 신규 43종목이 포함됩니다.
 
+> 2026-10-30 긴급 15:00 회차: 첫 전송(메시지 175)은 분봉 선택 함수에 11:30 기본값이 남아 있어 **무효**입니다. 채널 게시물에 사용 금지를 표시하고 정정 메시지 176을 보냈습니다. 선택시각 전달 오류를 수정한 [재실행](https://github.com/biyosi77/biyosi77/actions/runs/41014915010)에서 133/133종목의 **정확한 15:00 KST KRX 분봉**, 상장주식 수, 엑셀 검증을 확인하고 수정본을 메시지 177로 보냈습니다. 전송 기록은 `sent`와 메시지 ID 177입니다.
+
 `valuation/template/2027_valuation_20261020_133.xlsx`의 **133종목**과 26E·YoY 열을 기준으로 별도 보고서를 만듭니다. 기존 90종목 템플릿은 이력으로 보존했습니다. 2026-10-20에 요청받은 43종목의 코드와 시장은 [KRX 상장법인 목록](https://kind.krx.co.kr/corpgeneral/corpList.do?method=download)에서 대조했으며 매핑은 `valuation/template/additions_20261020.json`에 기록했습니다. 요청의 `한야이엔지`는 상장명 `한양이엔지`(045100)로, `삼화콘덴서`는 상장법인 `삼화콘덴서공업`(001820)의 종목 표시명으로 연결했습니다. `SFA`(056190)와 기존 `SFA반도체`(036540)는 각각 별도 종목입니다. 기존 유튜브 리포트의 `.github/workflows/daily_report.yml`, `main.py`, 루트 의존성은 수정하지 않습니다. 보고서는 `valuation_YYYYMMDD_1130.xlsx` 또는 `valuation_YYYYMMDD_close.xlsx`이며 원본 템플릿을 덮어쓰지 않습니다.
 
 ## 데이터와 계산
