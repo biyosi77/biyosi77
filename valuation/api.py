@@ -186,12 +186,19 @@ class MarketData:
         return result
 
     def minute(self, code, day, cutoff="113000"):
-        payload = self.kis("/uapi/domestic-stock/v1/quotations/inquire-time-dailychartprice",
-                           "FHKST03010230", {"FID_COND_MRKT_DIV_CODE": "J",
-                           "FID_INPUT_ISCD": code, "FID_INPUT_HOUR_1": cutoff,
-                           "FID_INPUT_DATE_1": day.strftime("%Y%m%d"),
-                           "FID_PW_DATA_INCU_YN": "N", "FID_FAKE_TICK_INCU_YN": ""})
-        return choose_minute(payload.get("output2", []), day)
+        if cutoff == "150000" and day == datetime.now(KST).date():
+            # KIS's dedicated same-day endpoint is the live intraday source.
+            payload = self.kis("/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice",
+                               "FHKST03010200", {"FID_COND_MRKT_DIV_CODE": "J",
+                               "FID_INPUT_ISCD": code, "FID_INPUT_HOUR_1": cutoff,
+                               "FID_PW_DATA_INCU_YN": "Y", "FID_ETC_CLS_CODE": ""})
+        else:
+            payload = self.kis("/uapi/domestic-stock/v1/quotations/inquire-time-dailychartprice",
+                               "FHKST03010230", {"FID_COND_MRKT_DIV_CODE": "J",
+                               "FID_INPUT_ISCD": code, "FID_INPUT_HOUR_1": cutoff,
+                               "FID_INPUT_DATE_1": day.strftime("%Y%m%d"),
+                               "FID_PW_DATA_INCU_YN": "N", "FID_FAKE_TICK_INCU_YN": ""})
+        return choose_minute(payload.get("output2", []), day, cutoff)
 
     def current_shares(self, code):
         payload = self.kis("/uapi/domestic-stock/v1/quotations/inquire-price",

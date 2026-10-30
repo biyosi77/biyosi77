@@ -114,6 +114,21 @@ def test_minute_request_is_krx_venue_and_requested_day():
     assert calls[-1][2]["FID_INPUT_HOUR_1"] == "150000"
 
 
+def test_1500_same_day_uses_live_krx_minute_endpoint():
+    client = MarketData.__new__(MarketData)
+    calls = []
+    today = datetime.now(ZoneInfo("Asia/Seoul")).date()
+    def fake_kis(path, tr_id, params):
+        calls.append((path, tr_id, params))
+        return {"output2": [{"stck_bsop_date": today.strftime("%Y%m%d"),
+                              "stck_cntg_hour": "150000", "stck_prpr": "100"}]}
+    client.kis = fake_kis
+    assert client.minute("005930", today, "150000") == ("150000", 100)
+    assert calls[0][0].endswith("/inquire-time-itemchartprice")
+    assert calls[0][1] == "FHKST03010200"
+    assert calls[0][2]["FID_COND_MRKT_DIV_CODE"] == "J"
+
+
 def test_close_rejects_wrong_date():
     client = MarketData.__new__(MarketData)
     client.krx = lambda *a: [{"ISU_CD": "005930", "BAS_DD": "20261014",

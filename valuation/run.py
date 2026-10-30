@@ -146,6 +146,11 @@ def main(argv=None):
                     time.sleep(10 * (attempt + 1))
             if not any(q.price is not None and q.shares is not None for q in quotes.values()):
                 raise DataError(f"all {len(rows)} market prices or listed share counts unavailable")
+            if args.slot == "1500":
+                timely = sum(q.price is not None and q.shares is not None
+                             and q.basis >= "14:50 KST" for q in quotes.values())
+                if timely < max(1, len(rows) // 2):
+                    raise DataError(f"15:00 KRX minute dataset not confirmed ({timely}/{len(rows)} timely prices)")
         out = folder / f"valuation_{day:%Y%m%d}_{args.slot}.xlsx"
         summary = build(TEMPLATE, out, day, args.slot, quotes,
                         test=args.fixture_template_prices)
