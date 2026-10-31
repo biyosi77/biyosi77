@@ -127,6 +127,15 @@ def test_1500_same_day_uses_live_krx_minute_endpoint():
     assert calls[0][0].endswith("/inquire-time-itemchartprice")
     assert calls[0][1] == "FHKST03010200"
     assert calls[0][2]["FID_COND_MRKT_DIV_CODE"] == "J"
+    client.kis = lambda path, tr_id, params: (
+        calls.append((path, tr_id, params)) or
+        {"output2": [{"stck_bsop_date": today.strftime("%Y%m%d"),
+                      "stck_cntg_hour": "153000", "stck_prpr": "225000"},
+                     {"stck_bsop_date": today.strftime("%Y%m%d"),
+                      "stck_cntg_hour": "160000", "stck_prpr": "220500"}]})
+    assert client.minute("005930", today, "153000") == ("153000", 225000)
+    assert calls[-1][0].endswith("/inquire-time-itemchartprice")
+    assert calls[-1][2]["FID_INPUT_HOUR_1"] == "153000"
 
 
 def test_close_rejects_wrong_date():
@@ -137,54 +146,29 @@ def test_close_rejects_wrong_date():
         client.closes(DAY)
 
 
-def test_kis_close_fallback_requires_exact_day_and_krx_venue():
+def test_legacy_collector_cannot_use_after_market_daily_price_for_close():
     client = MarketData.__new__(MarketData)
-    calls = []
-    def fake_kis(path, tr_id, params):
-        calls.append((path, tr_id, params))
-        return {"output2": [
-            {"stck_bsop_date": "20261018", "stck_clpr": "999999"},
-            {"stck_bsop_date": "20261019", "stck_clpr": "105000"},
-        ]}
-    client.kis = fake_kis
-    day = date(2026, 10, 19)
-    assert client.daily_close("005930", day) == 105000
-    assert calls[0][2]["FID_COND_MRKT_DIV_CODE"] == "J"
-    assert calls[0][2]["FID_INPUT_DATE_1"] == calls[0][2]["FID_INPUT_DATE_2"] == "20261019"
-    assert calls[0][2]["FID_ORG_ADJ_PRC"] == "1"
-    client.kis = lambda *a: {"output2": [{"stck_bsop_date": "20261018", "stck_clpr": "999999"}]}
-    assert client.daily_close("005930", day) is None
-
-
-def test_close_uses_exact_date_kis_fallback_when_krx_daily_is_empty():
-    client = MarketData.__new__(MarketData)
-    client.closes = lambda day: (_ for _ in ()).throw(DataError("KRX confirmed close dataset empty or not yet published"))
-    client.shares = lambda day: {"005930": (5969782550, "stk_isu_base_info")}
-    client.daily_close = lambda code, day: 105000
-    client.sleep = lambda _: None
-    quote = client.collect(["005930"], date(2026, 10, 19), "close")["005930"]
-    assert quote.price == 105000 and quote.shares == 5969782550
-    assert "KIS KRX 일봉" in quote.source
-    assert quote.basis == "15:30 KST 정규장 종가"
+    with pytest.raises(DataError, match="invalid price slot"):
+        client.collect(["005930"], date(2026, 10, 19), "close")
 
 
 def test_reference_time_guard():
     kst = ZoneInfo("Asia/Seoul")
     with pytest.raises(ValueError):
-        enforce_time(DAY, "close", datetime(2026, 10, 15, 15, 59, tzinfo=kst))
+        enforce_time(DAY, "close", datetime(2026, 10, 15, 15, 39, tzinfo=kst))
     enforce_time(DAY, "1130", datetime(2026, 10, 15, 12, 0, tzinfo=kst))
-    assert latest_scheduled_day(datetime(2026, 10, 31, 10, 47, tzinfo=kst), "close") == date(2026, 10, 30)
-    assert latest_scheduled_day(datetime(2026, 11, 1, 0, 30, tzinfo=kst), "close") == date(2026, 10, 30)
+    assert latest_scheduled_day(datetime(2026, 10, 30, 15, 47, tzinfo=kst), "close") == date(2026, 10, 30)
+    assert latest_scheduled_day(datetime(2026, 10, 31, 0, 30, tzinfo=kst), "close") == date(2026, 10, 30)
     with pytest.raises(ValueError, match="only close"):
         latest_scheduled_day(datetime(2026, 10, 31, 10, 47, tzinfo=kst), "1130")
 
 
-def test_single_schedule_targets_previous_day_close():
+def test_single_schedule_targets_same_day_close():
     kst = ZoneInfo("Asia/Seoul")
-    cron = "47 10 * * 2-6"
-    assert scheduled_target(datetime(2026, 10, 31, 10, 47, tzinfo=kst), cron) == ("close", date(2026, 10, 30))
-    assert scheduled_target(datetime(2026, 11, 1, 0, 30, tzinfo=kst), cron) == ("close", date(2026, 10, 30))
-    assert scheduled_target(datetime(2026, 11, 3, 11, 0, tzinfo=kst), cron) == ("close", date(2026, 11, 2))
+    cron = "47 15 * * 1-5"
+    assert scheduled_target(datetime(2026, 10, 30, 15, 47, tzinfo=kst), cron) == ("close", date(2026, 10, 30))
+    assert scheduled_target(datetime(2026, 10, 31, 0, 30, tzinfo=kst), cron) == ("close", date(2026, 10, 30))
+    assert scheduled_target(datetime(2026, 11, 2, 16, 0, tzinfo=kst), cron) == ("close", date(2026, 11, 2))
     with pytest.raises(ValueError, match="unrecognized"):
         scheduled_target(datetime(2026, 10, 31, 10, 47, tzinfo=kst), "17 16 * * 1-5")
 
@@ -194,10 +178,10 @@ def test_schedule_parser_keeps_resolved_close_with_empty_env(monkeypatch):
     class FrozenDateTime(datetime):
         @classmethod
         def now(cls, tz=None):
-            return cls(2026, 10, 31, 10, 50, tzinfo=tz)
+            return cls(2026, 10, 30, 15, 50, tzinfo=tz)
     monkeypatch.setattr(run, "datetime", FrozenDateTime)
     monkeypatch.setenv("GITHUB_EVENT_NAME", "schedule")
-    monkeypatch.setenv("SCHEDULE_CRON", "47 10 * * 2-6")
+    monkeypatch.setenv("SCHEDULE_CRON", "47 15 * * 1-5")
     monkeypatch.setenv("SLOT", "")
     monkeypatch.setenv("TRADE_DATE", "")
     args = run.argument_parser().parse_args([])
@@ -347,7 +331,8 @@ def test_close_delivery_uses_separate_key_and_blocks_retry(monkeypatch, tmp_path
         def read(self, key): return values.get(key), "sha"
         def write(self, key, value, sha=None): values[key] = value
     class FakeMarket:
-        def is_open(self, day): pytest.fail('normal close must not request KIS calendar')
+        def is_open(self, day): return True
+        def collect_same_day_close(self, rows, day): return self.collect_verified_close(rows, day)
         def collect_verified_close(self, rows, day):
             market_calls.append(day)
             return {code: Quote(10000, 1000000, "KRX stk_bydd_trd", "15:30 KST 정규장 종가", "test", trade_date=day.isoformat()) for code in rows}
@@ -408,6 +393,77 @@ def test_verified_close_is_two_bulk_requests_and_checks_response_date():
         client.collect_verified_close(['005930','000660'], date(2026, 10, 29))
 
 
+def test_kis_regular_close_uses_exact_1530_bar_and_separate_shares():
+    client = MarketData.__new__(MarketData)
+    calls = []
+    def minute(code, day, cutoff):
+        calls.append(('minute', code, day, cutoff))
+        return ('153000', 225000)
+    def shares(code):
+        calls.append(('shares', code))
+        return 5846278608
+    client.minute = minute
+    client.current_shares = shares
+    quote = client.kis_regular_close_snapshot('005930', date(2026, 10, 30))
+    assert (quote.price, quote.shares, quote.trade_date) == (225000, 5846278608, '2026-10-30')
+    assert quote.basis == '15:30 KST 정규장 종가'
+    assert calls == [('minute', '005930', date(2026, 10, 30), '153000'),
+                     ('shares', '005930')]
+    calls.clear()
+    client.minute = lambda *args: ('152900', 220500)
+    stale = client.kis_regular_close_snapshot('005930', date(2026, 10, 30))
+    assert stale.price is None and '15:30' in stale.reason and calls == []
+
+
+def test_same_day_collection_polls_one_sentinel_then_fetches_each_code_once():
+    client = MarketData.__new__(MarketData)
+    calls = []
+    sleeps = []
+    def snapshot(code, day):
+        calls.append(code)
+        price = None if len(calls) == 1 else 100
+        return Quote(price, 1000, 'KIS KRX(J) 15:30 분봉; KIS 상장주식수',
+                     '15:30 KST 정규장 종가' if price else '', 'test',
+                     '' if price else '당일 종가 미확인', day.isoformat())
+    client.kis_regular_close_snapshot = snapshot
+    client.sleep = sleeps.append
+    quotes = client.collect_same_day_close(['005930', '000660'], date(2026, 10, 30),
+        now=lambda: datetime(2026, 10, 30, 16, 0, tzinfo=ZoneInfo('Asia/Seoul')))
+    assert set(quotes) == {'005930', '000660'}
+    assert calls == ['005930', '005930', '000660']
+    assert sleeps == [300, 0.2]
+
+
+def test_same_day_partial_missing_is_marked_without_stale_substitution(tmp_path):
+    from valuation.run import verify_close_file, verify_close_quotes
+    client = MarketData.__new__(MarketData)
+    client.sleep = lambda _: None
+    def snapshot(code, day):
+        price = 100 if code == '005930' else None
+        return Quote(price, 1000, 'KIS KRX(J) 15:30 분봉; KIS 상장주식수',
+                     '15:30 KST 정규장 종가' if price else '', 'test',
+                     '' if price else '당일 종가 미확인', day.isoformat())
+    client.kis_regular_close_snapshot = snapshot
+    day = date(2026, 10, 30)
+    quotes = client.collect_same_day_close(['005930', '000660'], day,
+        now=lambda: datetime(2026, 10, 30, 16, 45, tzinfo=ZoneInfo('Asia/Seoul')))
+    verify_close_quotes(quotes, ['005930', '000660'], day)
+    assert quotes['000660'].price is None and quotes['000660'].reason
+    _, rows = records(TEMPLATE)
+    full = {code: Quote(100, 1000, 'KIS KRX(J) 15:30 분봉; KIS 상장주식수',
+                        '15:30 KST 정규장 종가', 'test', trade_date=day.isoformat())
+            for code in rows}
+    full['172670'] = Quote(None, None, 'KIS KRX(J) 15:30 분봉; KIS 상장주식수',
+                           '', 'test', '15:30 KRX 정규장 분봉 미확인', day.isoformat())
+    output = tmp_path / 'valuation_20261030_close.xlsx'
+    summary = build(TEMPLATE, output, day, 'close', full)
+    verify_close_quotes(full, rows, day)
+    verify_close_file(output, rows, full, day)
+    assert summary['successful_prices'] == 132
+    assert summary['missing'] == ['172670']
+    assert '부분 누락 있음' in caption(day, 'close', summary, delayed=True)
+
+
 def test_rate_limit_stops_without_request_retry():
     class Session:
         calls = 0
@@ -423,14 +479,30 @@ def test_rate_limit_stops_without_request_retry():
     assert client.session.calls == 1
 
 
+def test_kis_session_error_is_retried_only_twice():
+    client = MarketData.__new__(MarketData)
+    client.app_key = 'test-key'
+    client.app_secret = 'test-secret'
+    client.token = 'test-token'
+    calls = []
+    sleeps = []
+    client.sleep = sleeps.append
+    def request(*args, **kwargs):
+        calls.append(1)
+        return {'rt_cd': '1', 'msg_cd': 'OPSQ1002'} if len(calls) < 3 else {'rt_cd': '0'}
+    client._request = request
+    assert client.kis('/test', 'FHKST03010230', {}) == {'rt_cd': '0'}
+    assert len(calls) == 3 and sleeps == [1, 2]
+
+
 def test_stale_schedule_skips_before_market_or_ledger(monkeypatch, tmp_path):
     import valuation.run as run
     class FrozenDateTime(datetime):
         @classmethod
-        def now(cls, tz=None): return cls(2026, 10, 31, 10, 50, tzinfo=tz)
+        def now(cls, tz=None): return cls(2026, 10, 30, 15, 50, tzinfo=tz)
     monkeypatch.setattr(run, 'datetime', FrozenDateTime)
     monkeypatch.setenv('GITHUB_EVENT_NAME', 'schedule')
-    monkeypatch.setenv('SCHEDULE_CRON', '47 10 * * 2-6')
+    monkeypatch.setenv('SCHEDULE_CRON', '47 15 * * 1-5')
     monkeypatch.setenv('TRADE_DATE', '2026-10-29')
     monkeypatch.setenv('DRY_RUN', 'false')
     monkeypatch.setattr(run, 'MarketData', lambda: pytest.fail('no market access'))

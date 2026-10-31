@@ -5,7 +5,7 @@ import os
 import re
 import time
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, time as clock_time
 from zoneinfo import ZoneInfo
 
 import requests
@@ -130,13 +130,19 @@ class MarketData:
         return self.token
 
     def kis(self, path, tr_id, params):
-        payload = self._request("GET", KIS + path, headers={
-            "authorization": "Bearer " + self._access_token(),
-            "appkey": self.app_key, "appsecret": self.app_secret,
-            "tr_id": tr_id, "custtype": "P"}, params=params)
-        if str(payload.get("rt_cd")) != "0":
-            raise DataError(f"KIS rejected {tr_id}: {payload.get('msg_cd', 'unknown')}")
-        return payload
+        for attempt in range(3):
+            payload = self._request("GET", KIS + path, headers={
+                "authorization": "Bearer " + self._access_token(),
+                "appkey": self.app_key, "appsecret": self.app_secret,
+                "tr_id": tr_id, "custtype": "P"}, params=params)
+            if str(payload.get("rt_cd")) == "0":
+                return payload
+            code = str(payload.get("msg_cd", "unknown"))
+            if code == "OPSQ1002" and attempt < 2:
+                self.sleep(2 ** attempt)
+                continue
+            raise DataError(f"KIS rejected {tr_id}: {code}")
+        raise DataError("KIS session retries exhausted")
 
     def krx(self, endpoint, day):
         payload = self._request("GET", KRX + "/" + endpoint,
@@ -195,7 +201,7 @@ class MarketData:
         return result
 
     def minute(self, code, day, cutoff="113000"):
-        if cutoff == "150000" and day == datetime.now(KST).date():
+        if cutoff in ("150000", "153000") and day == datetime.now(KST).date():
             # KIS's dedicated same-day endpoint is the live intraday source.
             payload = self.kis("/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice",
                                "FHKST03010200", {"FID_COND_MRKT_DIV_CODE": "J",
@@ -215,21 +221,60 @@ class MarketData:
                                                 "FID_INPUT_ISCD": code})
         return positive_int(payload.get("output", {}).get("lstn_stcn"))
 
-    def daily_close(self, code, day):
-        """Exact-date, unadjusted KRX regular-session daily close from KIS."""
-        stamp = day.strftime("%Y%m%d")
-        payload = self.kis("/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice",
-                           "FHKST03010100", {"FID_COND_MRKT_DIV_CODE": "J",
-                           "FID_INPUT_ISCD": code, "FID_INPUT_DATE_1": stamp,
-                           "FID_INPUT_DATE_2": stamp, "FID_PERIOD_DIV_CODE": "D",
-                           "FID_ORG_ADJ_PRC": "1"})
-        rows = payload.get("output2", [])
-        matching = {positive_int(r.get("stck_clpr")) for r in rows
-                    if str(r.get("stck_bsop_date", "")) == stamp}
-        matching.discard(None)
-        if len(matching) > 1:
-            raise DataError("KIS conflicting same-day KRX daily closes")
-        return next(iter(matching)) if matching else None
+    def kis_regular_close_snapshot(self, code, day):
+        """Exact 15:30 KRX(J) bar plus listed shares; never use daily last price."""
+        bar = self.minute(code, day, "153000")
+        if bar is None or bar[0] != "153000":
+            reason = (f"15:30 KRX 정규장 분봉 미확인 (마지막 {bar[0][:2]}:{bar[0][2:4]})"
+                      if bar else "15:30 KRX 정규장 분봉 미확인")
+            return Quote(None, None, "KIS KRX(J) 15:30 분봉; KIS 상장주식수", "",
+                         datetime.now(KST).isoformat(timespec="seconds"), reason,
+                         day.isoformat())
+        shares = self.current_shares(code)
+        return Quote(bar[1], shares, "KIS KRX(J) 15:30 분봉; KIS 상장주식수",
+                     "15:30 KST 정규장 종가", datetime.now(KST).isoformat(timespec="seconds"),
+                     "" if shares else "상장주식 수 미확인", day.isoformat())
+
+    def collect_same_day_close(self, codes, day, *, now=None):
+        """Poll one sentinel until published, then collect each stock once."""
+        now = now or (lambda: datetime.now(KST))
+        ordered = list(codes)
+        if not ordered:
+            raise DataError("empty stock universe")
+        deadline = clock_time(16, 45)
+        first_code = ordered[0]
+        for attempt in range(13):
+            first = self.kis_regular_close_snapshot(first_code, day)
+            if first.price and first.shares:
+                break
+            if now().time() >= deadline or attempt == 12:
+                raise DataError("KIS same-day KRX close not confirmed by 16:45 KST")
+            self.sleep(300)
+        quotes = {first_code: first}
+        for code in ordered[1:]:
+            self.sleep(0.2)  # Well below KIS's real-account requests/second limit.
+            try:
+                quotes[code] = self.kis_regular_close_snapshot(code, day)
+            except DataError as exc:
+                if any(term in str(exc) for term in ("rate limited", "EGW00201", "HTTP 401", "HTTP 403", "token")):
+                    raise
+                quotes[code] = Quote(None, None, "KIS KRX(J) 15:30 분봉; KIS 상장주식수",
+                                     "", datetime.now(KST).isoformat(timespec="seconds"),
+                                     "KIS 종가/주식 수 조회 실패", day.isoformat())
+        missing = [code for code, quote in quotes.items()
+                   if quote.price is None or quote.shares is None]
+        if missing and now().time() < deadline:
+            self.sleep(20)
+            for code in missing:
+                self.sleep(0.2)
+                try:
+                    quotes[code] = self.kis_regular_close_snapshot(code, day)
+                except DataError as exc:
+                    if any(term in str(exc) for term in ("rate limited", "EGW00201", "HTTP 401", "HTTP 403", "token")):
+                        raise
+        if not any(q.price is not None and q.shares is not None for q in quotes.values()):
+            raise DataError("KIS same-day KRX close collection failed for all stocks")
+        return quotes
 
     def collect_verified_close(self, codes, day):
         """Two market-wide daily requests; never substitute minute/current prices."""
@@ -244,61 +289,8 @@ class MarketData:
                             checked, trade_date=day.isoformat()) for code in codes}
 
     def collect(self, codes, day, slot):
-        if slot not in ("1130", "1500", "close"):
+        if slot not in ("1130", "1500"):
             raise DataError("invalid price slot")
-        if slot == "close":
-            daily = {}
-            for attempt in range(3):
-                try:
-                    daily = self.closes(day)
-                except DataError as exc:
-                    if str(exc) != "KRX confirmed close dataset empty or not yet published":
-                        raise
-                    daily = {}
-                if all(c in daily and all(daily[c][0:2]) for c in codes) or attempt == 2:
-                    break
-                self.sleep(10 * (attempt + 1))
-            if all(c in daily and all(daily[c][0:2]) for c in codes):
-                checked = datetime.now(KST).isoformat(timespec="seconds")
-                return {code: Quote(*(daily[code][0:2]),
-                             source="KRX " + daily[code][2], basis="15:30 KST 정규장 종가",
-                             checked_at=checked) for code in codes}
-            try:
-                shares = self.shares(day)
-            except DataError:
-                shares = {}
-            quotes = {}
-            for code in codes:
-                price, share, endpoint = daily.get(code, (None, None, ""))
-                if not price:
-                    try:
-                        price = self.daily_close(code, day)
-                    except DataError as exc:
-                        if "KIS token" in str(exc):
-                            raise
-                        price = None
-                if not share:
-                    share, share_endpoint = shares.get(code, (None, ""))
-                    if not share and day == datetime.now(KST).date():
-                        try:
-                            share = self.current_shares(code)
-                            share_endpoint = "KIS KRX 현재가 상장주식수(lstn_stcn)"
-                        except DataError:
-                            share = None
-                else:
-                    share_endpoint = endpoint
-                checked = datetime.now(KST).isoformat(timespec="seconds")
-                if price and share:
-                    price_source = "KRX " + endpoint if daily.get(code, (None,))[0] else "KIS KRX 일봉 원주가"
-                    shares_source = (share_endpoint if share_endpoint.startswith("KIS")
-                                     else "KRX " + share_endpoint)
-                    quotes[code] = Quote(price, share, price_source + "; " + shares_source,
-                                         "15:30 KST 정규장 종가", checked)
-                else:
-                    quotes[code] = Quote(None, None, "KRX; KIS KRX 일봉", "", checked,
-                                         "당일 정규장 종가/상장주식 수 미확인")
-                self.sleep(0.12)
-            return quotes
         shares = {}
         for attempt in range(3):
             try:

@@ -2,13 +2,13 @@ name: KRX 2027 valuation
 
 on:
   schedule:
-    # Previous trading calendar day close, after KRX daily data publication.
-    - cron: '47 10 * * 2-6'
+    # Same-day regular-session close; verify exact KIS KRX(J) 15:30 minute bars.
+    - cron: '47 15 * * 1-5'
       timezone: Asia/Seoul
   workflow_dispatch:
     inputs:
       trade_date:
-        description: 'KRX 거래일 YYYY-MM-DD (과거 종가 재작업 시 명시)'
+        description: 'KRX 거래일 YYYY-MM-DD (비우면 오늘 KST)'
         required: false
         type: string
       slot:
@@ -43,7 +43,7 @@ concurrency:
 jobs:
   valuation:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 75
     env:
       TZ: Asia/Seoul
       TRADE_DATE: ${{ inputs.trade_date }}

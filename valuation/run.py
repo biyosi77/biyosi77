@@ -15,7 +15,7 @@ from .delivery import DeliveryError, DuplicateDelivery, Ledger, Telegram
 from .workbook import MAIN, RAW, build, records
 
 TEMPLATE = Path(__file__).parent / "template" / "2027_valuation_20261020_133.xlsx"
-CLOSE_CRON = "47 10 * * 2-6"
+CLOSE_CRON = "47 15 * * 1-5"
 
 
 def flag(value):
@@ -23,16 +23,16 @@ def flag(value):
 
 
 def latest_scheduled_day(now, slot):
-    """Resolve the preceding day's close for the last Tue-Sat 10:47 run."""
+    """Resolve the same trading calendar day's close after the 15:47 run."""
     if slot != "close":
         raise ValueError("only close has a scheduled target")
-    trigger = clock_time(10, 47)
+    trigger = clock_time(15, 47)
     candidate = now.date()
     if now.time() < trigger:
         candidate -= timedelta(days=1)
-    while candidate.weekday() not in (1, 2, 3, 4, 5):
+    while candidate.weekday() >= 5:
         candidate -= timedelta(days=1)
-    return candidate - timedelta(days=1)
+    return candidate
 
 
 def scheduled_target(now, cron):
@@ -62,7 +62,7 @@ def enforce_time(day, slot, now):
     if day > now.date():
         raise ValueError("future trade date is not allowed")
     if day == now.date():
-        threshold = clock_time(11, 35) if slot == "1130" else clock_time(15, 2) if slot == "1500" else clock_time(16, 0)
+        threshold = clock_time(11, 35) if slot == "1130" else clock_time(15, 2) if slot == "1500" else clock_time(15, 40)
         if now.time() < threshold:
             raise ValueError("price basis time has not been reached")
 
@@ -75,11 +75,11 @@ def fixture_quotes(workbook, rows):
                         "테스트 자료", stamp) for code, row in rows.items()}
 
 
-def caption(day, slot, summary, test=False):
+def caption(day, slot, summary, test=False, delayed=False):
     missing = summary["missing"]
     suffix = ("없음" if not missing else ", ".join(missing[:12]) +
               (f" 외 {len(missing)-12}종목" if len(missing) > 12 else ""))
-    return (f"{'[테스트] ' if test else ''}2027 밸류에이션 {day.isoformat()}\n"
+    return (f"{'[테스트] ' if test else ''}{'[17시 이후 지연] ' if delayed else ''}2027 밸류에이션 {day.isoformat()}\n"
             f"가격 기준: {'11:30 KST 또는 그 이전 KRX 정규장 마지막 분봉(개별 실제시각은 원자료)' if slot == '1130' else '15:00 KST 또는 그 이전 KRX 정규장 마지막 분봉(개별 실제시각은 원자료)' if slot == '1500' else '15:30 KST KRX 정규장 종가'}\n"
             f"가격·주식수 확인: {summary['successful_prices']}/{summary['total_stocks']}종목\n"
             f"27E PER/POR 미산출: {len(summary['uncomputed_per'])}/{len(summary['uncomputed_por'])}종목\n"
@@ -95,9 +95,14 @@ def verify_close_quotes(quotes, codes, day):
     if set(quotes) != set(codes):
         raise DataError("close verification failed: stock universe mismatch")
     for q in quotes.values():
-        if (q.trade_date != day.isoformat() or q.basis != "15:30 KST 정규장 종가"
-                or q.source not in ("KRX stk_bydd_trd", "KRX ksq_bydd_trd")
-                or q.price is None or q.price <= 0 or q.shares is None or q.shares <= 0):
+        if (q.trade_date != day.isoformat()
+                or q.source not in ("KRX stk_bydd_trd", "KRX ksq_bydd_trd",
+                                    "KIS KRX(J) 15:30 분봉; KIS 상장주식수")
+                or (q.price is not None and q.price <= 0)
+                or (q.shares is not None and q.shares <= 0)
+                or (q.price is not None and q.basis != "15:30 KST 정규장 종가")
+                or (q.price is None and q.basis)
+                or ((q.price is None or q.shares is None) and not q.reason)):
             raise DataError("close verification failed: date, session, source or value mismatch")
 
 
@@ -111,10 +116,10 @@ def verify_close_file(path, rows, quotes, day):
         for code, row in rows.items():
             q = quotes[code]
             if (str(raw.cell(row, 2).value) != code
-                    or raw.cell(row, 9).value != q.price
-                    or raw.cell(row, 10).value != q.shares
+                    or raw.cell(row, 9).value != (q.price if q.price is not None else "미확인")
+                    or raw.cell(row, 10).value != (q.shares if q.shares is not None else "미확인")
                     or raw.cell(row, 25).value != q.source
-                    or raw.cell(row, 26).value != q.basis):
+                    or raw.cell(row, 26).value != (q.basis or "미확인")):
                 raise DataError("workbook close evidence mismatch")
     finally:
         workbook.close()
@@ -175,13 +180,21 @@ def main(argv=None):
             quotes = fixture_quotes(template, rows)
         else:
             market = MarketData()
-            try:
-                quotes = market.collect_verified_close(rows, day)
-            except KRXCloseEmpty:
-                # A complete KRX dataset proves this was an open session. Only
-                # an empty dataset needs the separate KIS calendar request.
-                if market.is_open(day):
-                    raise
+            if day == now.date():
+                is_open = market.is_open(day)
+                if is_open:
+                    quotes = market.collect_same_day_close(rows, day)
+                    log["data_source"] = "KIS KRX(J) exact-date 15:30 minute close"
+            else:
+                try:
+                    quotes = market.collect_verified_close(rows, day)
+                    is_open = True
+                    log["data_source"] = "KRX market-wide confirmed daily close"
+                except KRXCloseEmpty:
+                    is_open = market.is_open(day)
+                    if is_open:
+                        raise
+            if not is_open:
                 if not args.dry_run:
                     ledger = ledger or Ledger()
                     ledger.ensure_branch()
@@ -195,7 +208,8 @@ def main(argv=None):
             verify_close_quotes(quotes, rows, day)
             log["price_verification"] = {"trade_date": day.isoformat(),
                                          "basis": "15:30 KST 정규장 종가",
-                                         "verified_stocks": len(quotes), "passed": True}
+                                         "verified_stocks": sum(q.price is not None and q.shares is not None
+                                                                for q in quotes.values()), "passed": True}
         out = folder / f"valuation_{day:%Y%m%d}_{args.slot}.xlsx"
         summary = build(TEMPLATE, out, day, args.slot, quotes,
                         test=args.fixture_template_prices)
@@ -214,7 +228,9 @@ def main(argv=None):
         claim = ledger.claim(key, force=args.resend)
         claimed = True
         verify_send_day(day, allow_historical=allow_historical)
-        message_id = telegram.send_document(out, caption(day, args.slot, summary, args.test_send))
+        message_id = telegram.send_document(out, caption(
+            day, args.slot, summary, args.test_send,
+            delayed=datetime.now(KST).time() > clock_time(17, 0)))
         ledger.complete(key, claim, message_id)
         log.update({"status": "sent", "telegram_message_id": message_id})
         write_log(folder, "run.json", log)
