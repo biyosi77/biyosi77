@@ -2,15 +2,13 @@ name: KRX 2027 valuation
 
 on:
   schedule:
-    # One regular-session close per trading day; second run retries delivery.
-    - cron: '17 16 * * 1-5'
-      timezone: Asia/Seoul
-    - cron: '17 18 * * 1-5'
+    # Previous trading calendar day close, after KRX daily data publication.
+    - cron: '47 10 * * 2-6'
       timezone: Asia/Seoul
   workflow_dispatch:
     inputs:
       trade_date:
-        description: 'KRX 거래일 YYYY-MM-DD (비우면 오늘 KST)'
+        description: 'KRX 거래일 YYYY-MM-DD (과거 종가 재작업 시 명시)'
         required: false
         type: string
       slot:
@@ -71,6 +69,7 @@ jobs:
       - name: Install valuation dependencies
         run: pip install -r valuation/requirements.txt
       - name: Core tests
+        if: github.event_name == 'workflow_dispatch'
         run: python -m pytest valuation/tests -q
       - name: Build, validate, and optionally send
         run: python -m valuation.run

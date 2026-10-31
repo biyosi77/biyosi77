@@ -19,6 +19,10 @@ class DataError(RuntimeError):
     pass
 
 
+class KRXCloseEmpty(DataError):
+    """Both KRX daily market datasets contain no rows for the requested date."""
+
+
 @dataclass(frozen=True)
 class Quote:
     price: int | None
@@ -69,8 +73,8 @@ class MarketData:
         self.app_key = credential("KIS_APP_KEY")
         self.app_secret = credential("KIS_APP_SECRET")
         self.krx_key = credential("KRX_API_KEY")
-        if not all((self.app_key, self.app_secret, self.krx_key)):
-            raise DataError("KIS_APP_KEY, KIS_APP_SECRET, KRX_API_KEY 설정 필요")
+        if not self.krx_key:
+            raise DataError("KRX_API_KEY 설정 필요")
 
     def _request(self, method, url, *, headers=None, params=None, json=None):
         service = ("KIS token" if url.endswith("/oauth2/tokenP") else
@@ -113,6 +117,8 @@ class MarketData:
 
     def _access_token(self):
         if self.token is None:
+            if not self.app_key or not self.app_secret:
+                raise DataError("KIS_APP_KEY, KIS_APP_SECRET 설정 필요")
             payload = self._request("POST", KIS + "/oauth2/tokenP", headers={
                 "Accept": "text/plain", "charset": "UTF-8",
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/114.0.0.0 Safari/537.36"}, json={
@@ -185,7 +191,7 @@ class MarketData:
                 result[code] = (positive_int(row.get("TDD_CLSPRC")),
                                 positive_int(row.get("LIST_SHRS")), endpoint)
         if not result:
-            raise DataError("KRX confirmed close dataset empty or not yet published")
+            raise KRXCloseEmpty("KRX confirmed close dataset empty or not yet published")
         return result
 
     def minute(self, code, day, cutoff="113000"):

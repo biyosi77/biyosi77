@@ -8,7 +8,7 @@ import pytest
 import requests
 from openpyxl import load_workbook
 
-from valuation.api import DataError, KIS, MarketData, Quote, choose_minute, credential
+from valuation.api import DataError, KIS, KRXCloseEmpty, MarketData, Quote, choose_minute, credential
 from valuation.delivery import DeliveryError, Ledger
 from valuation.run import caption, enforce_time, latest_scheduled_day, scheduled_target
 from valuation.workbook import MAIN, RAW, build, records, yoy, yoy_formula
@@ -173,17 +173,20 @@ def test_reference_time_guard():
     with pytest.raises(ValueError):
         enforce_time(DAY, "close", datetime(2026, 10, 15, 15, 59, tzinfo=kst))
     enforce_time(DAY, "1130", datetime(2026, 10, 15, 12, 0, tzinfo=kst))
-    assert latest_scheduled_day(datetime(2026, 10, 16, 0, 30, tzinfo=kst), "close") == DAY
-    assert latest_scheduled_day(datetime(2026, 10, 17, 13, 0, tzinfo=kst), "1130") == date(2026, 10, 16)
+    assert latest_scheduled_day(datetime(2026, 10, 31, 10, 47, tzinfo=kst), "close") == date(2026, 10, 30)
+    assert latest_scheduled_day(datetime(2026, 11, 1, 0, 30, tzinfo=kst), "close") == date(2026, 10, 30)
+    with pytest.raises(ValueError, match="only close"):
+        latest_scheduled_day(datetime(2026, 10, 31, 10, 47, tzinfo=kst), "1130")
 
 
-def test_schedule_retry_targets_expected_trading_session():
+def test_single_schedule_targets_previous_day_close():
     kst = ZoneInfo("Asia/Seoul")
-    for cron in ("17 16 * * 1-5", "17 18 * * 1-5"):
-        assert scheduled_target(datetime(2026, 10, 28, 23, 5, tzinfo=kst), cron) == ("close", date(2026, 10, 28))
-        assert scheduled_target(datetime(2026, 10, 29, 1, 13, tzinfo=kst), cron) == ("close", date(2026, 10, 28))
+    cron = "47 10 * * 2-6"
+    assert scheduled_target(datetime(2026, 10, 31, 10, 47, tzinfo=kst), cron) == ("close", date(2026, 10, 30))
+    assert scheduled_target(datetime(2026, 11, 1, 0, 30, tzinfo=kst), cron) == ("close", date(2026, 10, 30))
+    assert scheduled_target(datetime(2026, 11, 3, 11, 0, tzinfo=kst), cron) == ("close", date(2026, 11, 2))
     with pytest.raises(ValueError, match="unrecognized"):
-        scheduled_target(datetime(2026, 10, 28, 18, 0, tzinfo=kst), "0 12 * * 1-5")
+        scheduled_target(datetime(2026, 10, 31, 10, 47, tzinfo=kst), "17 16 * * 1-5")
 
 
 def test_schedule_parser_keeps_resolved_close_with_empty_env(monkeypatch):
@@ -191,14 +194,14 @@ def test_schedule_parser_keeps_resolved_close_with_empty_env(monkeypatch):
     class FrozenDateTime(datetime):
         @classmethod
         def now(cls, tz=None):
-            return cls(2026, 10, 30, 1, 13, tzinfo=tz)
+            return cls(2026, 10, 31, 10, 50, tzinfo=tz)
     monkeypatch.setattr(run, "datetime", FrozenDateTime)
     monkeypatch.setenv("GITHUB_EVENT_NAME", "schedule")
-    monkeypatch.setenv("SCHEDULE_CRON", "17 18 * * 1-5")
+    monkeypatch.setenv("SCHEDULE_CRON", "47 10 * * 2-6")
     monkeypatch.setenv("SLOT", "")
     monkeypatch.setenv("TRADE_DATE", "")
     args = run.argument_parser().parse_args([])
-    assert (args.trade_date, args.slot) == ("2026-10-29", "close")
+    assert (args.trade_date, args.slot) == ("2026-10-30", "close")
 
 
 def test_manual_nonclose_rejected_before_delivery(monkeypatch, tmp_path):
@@ -344,7 +347,7 @@ def test_close_delivery_uses_separate_key_and_blocks_retry(monkeypatch, tmp_path
         def read(self, key): return values.get(key), "sha"
         def write(self, key, value, sha=None): values[key] = value
     class FakeMarket:
-        def is_open(self, day): return True
+        def is_open(self, day): pytest.fail('normal close must not request KIS calendar')
         def collect_verified_close(self, rows, day):
             market_calls.append(day)
             return {code: Quote(10000, 1000000, "KRX stk_bydd_trd", "15:30 KST 정규장 종가", "test", trade_date=day.isoformat()) for code in rows}
@@ -424,11 +427,11 @@ def test_stale_schedule_skips_before_market_or_ledger(monkeypatch, tmp_path):
     import valuation.run as run
     class FrozenDateTime(datetime):
         @classmethod
-        def now(cls, tz=None): return cls(2026, 10, 30, 1, 13, tzinfo=tz)
+        def now(cls, tz=None): return cls(2026, 10, 31, 10, 50, tzinfo=tz)
     monkeypatch.setattr(run, 'datetime', FrozenDateTime)
     monkeypatch.setenv('GITHUB_EVENT_NAME', 'schedule')
-    monkeypatch.setenv('SCHEDULE_CRON', '17 18 * * 1-5')
-    monkeypatch.setenv('TRADE_DATE', '')
+    monkeypatch.setenv('SCHEDULE_CRON', '47 10 * * 2-6')
+    monkeypatch.setenv('TRADE_DATE', '2026-10-29')
     monkeypatch.setenv('DRY_RUN', 'false')
     monkeypatch.setattr(run, 'MarketData', lambda: pytest.fail('no market access'))
     monkeypatch.setattr(run, 'Ledger', lambda: pytest.fail('no ledger access'))
@@ -436,13 +439,49 @@ def test_stale_schedule_skips_before_market_or_ledger(monkeypatch, tmp_path):
     assert json.loads((tmp_path/'run.json').read_text())['status'] == 'stale_schedule_skipped'
 
 
-def test_live_delivery_rejects_yesterday_and_before_close(monkeypatch):
+def test_live_delivery_requires_explicit_historical_date_and_close_time(monkeypatch):
     import valuation.run as run
     class FrozenDateTime(datetime):
         @classmethod
         def now(cls, tz=None): return cls(2026, 10, 30, 15, 0, tzinfo=tz)
     monkeypatch.setattr(run, 'datetime', FrozenDateTime)
-    with pytest.raises(ValueError, match="today"):
+    with pytest.raises(ValueError, match="historical"):
         run.verify_send_day(date(2026, 10, 29))
+    run.verify_send_day(date(2026, 10, 29), allow_historical=True)
     with pytest.raises(ValueError, match='not been reached'):
         run.verify_send_day(date(2026, 10, 30))
+
+
+def test_empty_krx_close_uses_calendar_once_to_skip_holiday(monkeypatch, tmp_path):
+    import valuation.run as run
+    calendar_calls = []
+    class FakeMarket:
+        def collect_verified_close(self, rows, day):
+            raise KRXCloseEmpty('KRX confirmed close dataset empty or not yet published')
+        def is_open(self, day):
+            calendar_calls.append(day)
+            return False
+    monkeypatch.setattr(run, 'MarketData', FakeMarket)
+    monkeypatch.setenv('GITHUB_EVENT_NAME', 'workflow_dispatch')
+    monkeypatch.setenv('DRY_RUN', 'true')
+    assert run.main(['--trade-date', '2026-10-25', '--slot', 'close',
+                     '--output-dir', str(tmp_path)]) == 0
+    assert calendar_calls == [date(2026, 10, 25)]
+    assert json.loads((tmp_path / 'run.json').read_text())['status'] == 'market_closed'
+
+
+def test_empty_krx_on_open_day_fails_without_second_price_collection(monkeypatch, tmp_path):
+    import valuation.run as run
+    price_calls = []
+    class FakeMarket:
+        def collect_verified_close(self, rows, day):
+            price_calls.append(day)
+            raise KRXCloseEmpty('KRX confirmed close dataset empty or not yet published')
+        def is_open(self, day): return True
+    monkeypatch.setattr(run, 'MarketData', FakeMarket)
+    monkeypatch.setenv('GITHUB_EVENT_NAME', 'workflow_dispatch')
+    monkeypatch.setenv('DRY_RUN', 'true')
+    assert run.main(['--trade-date', '2026-10-30', '--slot', 'close',
+                     '--output-dir', str(tmp_path)]) == 1
+    assert price_calls == [date(2026, 10, 30)]
+    assert 'empty or not yet published' in json.loads((tmp_path / 'run.json').read_text())['error']

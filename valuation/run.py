@@ -10,13 +10,12 @@ from pathlib import Path
 
 from openpyxl import load_workbook
 
-from .api import DataError, KST, MarketData, Quote
+from .api import DataError, KRXCloseEmpty, KST, MarketData, Quote
 from .delivery import DeliveryError, DuplicateDelivery, Ledger, Telegram
 from .workbook import MAIN, RAW, build, records
 
 TEMPLATE = Path(__file__).parent / "template" / "2027_valuation_20261020_133.xlsx"
-CLOSE_CRONS = {"17 16 * * 1-5", "17 18 * * 1-5"}
-PRIMARY_CRONS = {"17 16 * * 1-5"}
+CLOSE_CRON = "47 10 * * 2-6"
 
 
 def flag(value):
@@ -24,18 +23,20 @@ def flag(value):
 
 
 def latest_scheduled_day(now, slot):
-    """Recover the most recent weekday cron date across midnight/weekends."""
-    trigger = clock_time(12, 0) if slot == "1130" else clock_time(16, 0)
+    """Resolve the preceding day's close for the last Tue-Sat 10:47 run."""
+    if slot != "close":
+        raise ValueError("only close has a scheduled target")
+    trigger = clock_time(10, 47)
     candidate = now.date()
     if now.time() < trigger:
         candidate -= timedelta(days=1)
-    while candidate.weekday() >= 5:
+    while candidate.weekday() not in (1, 2, 3, 4, 5):
         candidate -= timedelta(days=1)
-    return candidate
+    return candidate - timedelta(days=1)
 
 
 def scheduled_target(now, cron):
-    if cron in CLOSE_CRONS:
+    if cron == CLOSE_CRON:
         return "close", latest_scheduled_day(now, "close")
     raise ValueError("unrecognized valuation schedule")
 
@@ -79,7 +80,7 @@ def caption(day, slot, summary, test=False):
     suffix = ("없음" if not missing else ", ".join(missing[:12]) +
               (f" 외 {len(missing)-12}종목" if len(missing) > 12 else ""))
     return (f"{'[테스트] ' if test else ''}2027 밸류에이션 {day.isoformat()}\n"
-            f"가격 기준: {'11:30 KST 또는 그 이전 KRX 정규장 마지막 분봉(개별 실제시각은 원자료)' if slot == '1130' else '15:00 KST 또는 그 이전 KRX 정규장 마지막 분봉(개별 실제시각은 원자료)' if slot == '1500' else '15:30 KST KRX 정규장 종가 (16:00 회차)'}\n"
+            f"가격 기준: {'11:30 KST 또는 그 이전 KRX 정규장 마지막 분봉(개별 실제시각은 원자료)' if slot == '1130' else '15:00 KST 또는 그 이전 KRX 정규장 마지막 분봉(개별 실제시각은 원자료)' if slot == '1500' else '15:30 KST KRX 정규장 종가'}\n"
             f"가격·주식수 확인: {summary['successful_prices']}/{summary['total_stocks']}종목\n"
             f"27E PER/POR 미산출: {len(summary['uncomputed_per'])}/{len(summary['uncomputed_por'])}종목\n"
             f"{'부분 누락 있음 — ' if missing else ''}가격·주식수 미확인: {suffix}")
@@ -119,11 +120,14 @@ def verify_close_file(path, rows, quotes, day):
         workbook.close()
 
 
-def verify_send_day(day):
+def verify_send_day(day, *, allow_historical=False):
     now = datetime.now(KST)
-    if day != now.date():
-        raise ValueError("live delivery requires today's KST trade date")
-    enforce_time(day, "close", now)
+    if day > now.date():
+        raise ValueError("live delivery cannot use a future KST trade date")
+    if day < now.date() and not allow_historical:
+        raise ValueError("historical delivery requires an explicit manual trade date or scheduled close run")
+    if day == now.date():
+        enforce_time(day, "close", now)
 
 
 def main(argv=None):
@@ -147,13 +151,16 @@ def main(argv=None):
             raise ValueError("resend requires an explicit manual send run")
         day = date.fromisoformat(args.trade_date)
         now = datetime.now(KST)
-        if schedule_cron and (day != now.date() or now.weekday() >= 5):
+        if schedule_cron and day != scheduled_target(now, schedule_cron)[1]:
             log["status"] = "stale_schedule_skipped"
             write_log(folder, "run.json", log)
             print(json.dumps(log, ensure_ascii=False))
             return 0
+        allow_historical = bool(schedule_cron) or (
+            os.getenv("GITHUB_EVENT_NAME") == "workflow_dispatch"
+            and bool(os.getenv("TRADE_DATE", "").strip()))
         if not args.dry_run:
-            verify_send_day(day)
+            verify_send_day(day, allow_historical=allow_historical)
         if not args.fixture_template_prices:
             enforce_time(day, args.slot, now)
         key = f"{day:%Y%m%d}_{args.slot}"
@@ -168,7 +175,13 @@ def main(argv=None):
             quotes = fixture_quotes(template, rows)
         else:
             market = MarketData()
-            if not market.is_open(day):
+            try:
+                quotes = market.collect_verified_close(rows, day)
+            except KRXCloseEmpty:
+                # A complete KRX dataset proves this was an open session. Only
+                # an empty dataset needs the separate KIS calendar request.
+                if market.is_open(day):
+                    raise
                 if not args.dry_run:
                     ledger = ledger or Ledger()
                     ledger.ensure_branch()
@@ -179,7 +192,6 @@ def main(argv=None):
                 write_log(folder, "run.json", log)
                 print("KRX market closed; skipped")
                 return 0
-            quotes = market.collect_verified_close(rows, day)
             verify_close_quotes(quotes, rows, day)
             log["price_verification"] = {"trade_date": day.isoformat(),
                                          "basis": "15:30 KST 정규장 종가",
@@ -195,13 +207,13 @@ def main(argv=None):
             return 0
         verify_close_quotes(quotes, rows, day)
         verify_close_file(out, rows, quotes, day)
-        verify_send_day(day)
+        verify_send_day(day, allow_historical=allow_historical)
         telegram = Telegram()
         telegram.check_permission()
         ledger = ledger or Ledger()
         claim = ledger.claim(key, force=args.resend)
         claimed = True
-        verify_send_day(day)
+        verify_send_day(day, allow_historical=allow_historical)
         message_id = telegram.send_document(out, caption(day, args.slot, summary, args.test_send))
         ledger.complete(key, claim, message_id)
         log.update({"status": "sent", "telegram_message_id": message_id})
@@ -218,8 +230,7 @@ def main(argv=None):
         reason = str(exc)
         log.update({"status": "failed", "error": reason})
         write_log(folder, "run.json", log)
-        if (not args.dry_run and not args.fixture_template_prices
-                and (not schedule_cron or schedule_cron in PRIMARY_CRONS)):
+        if not args.dry_run and not args.fixture_template_prices:
             try:
                 Telegram().send_failure(args.trade_date, args.slot, reason, uncertain=claimed)
             except DeliveryError:
