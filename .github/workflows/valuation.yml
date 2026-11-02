@@ -3,8 +3,8 @@ name: KRX 2027 valuation
 on:
   schedule:
     # Same-day regular-session close; verify exact KIS KRX(J) 15:30 minute bars.
-    - cron: '47 15 * * 1-5'
-      timezone: Asia/Seoul
+    # Explicit UTC: 06:47 UTC = 15:47 Asia/Seoul, Monday-Friday.
+    - cron: '47 6 * * 1-5'
   workflow_dispatch:
     inputs:
       trade_date:

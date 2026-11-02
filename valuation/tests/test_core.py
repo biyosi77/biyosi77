@@ -165,7 +165,10 @@ def test_reference_time_guard():
 
 def test_single_schedule_targets_same_day_close():
     kst = ZoneInfo("Asia/Seoul")
-    cron = "47 15 * * 1-5"
+    cron = "47 6 * * 1-5"
+    utc_trigger = datetime(2026, 11, 2, 6, 47, tzinfo=ZoneInfo("UTC"))
+    assert utc_trigger.astimezone(kst).hour == 15
+    assert scheduled_target(utc_trigger.astimezone(kst), cron) == ("close", date(2026, 11, 2))
     assert scheduled_target(datetime(2026, 10, 30, 15, 47, tzinfo=kst), cron) == ("close", date(2026, 10, 30))
     assert scheduled_target(datetime(2026, 10, 31, 0, 30, tzinfo=kst), cron) == ("close", date(2026, 10, 30))
     assert scheduled_target(datetime(2026, 11, 2, 16, 0, tzinfo=kst), cron) == ("close", date(2026, 11, 2))
@@ -181,7 +184,7 @@ def test_schedule_parser_keeps_resolved_close_with_empty_env(monkeypatch):
             return cls(2026, 10, 30, 15, 50, tzinfo=tz)
     monkeypatch.setattr(run, "datetime", FrozenDateTime)
     monkeypatch.setenv("GITHUB_EVENT_NAME", "schedule")
-    monkeypatch.setenv("SCHEDULE_CRON", "47 15 * * 1-5")
+    monkeypatch.setenv("SCHEDULE_CRON", "47 6 * * 1-5")
     monkeypatch.setenv("SLOT", "")
     monkeypatch.setenv("TRADE_DATE", "")
     args = run.argument_parser().parse_args([])
@@ -502,7 +505,7 @@ def test_stale_schedule_skips_before_market_or_ledger(monkeypatch, tmp_path):
         def now(cls, tz=None): return cls(2026, 10, 30, 15, 50, tzinfo=tz)
     monkeypatch.setattr(run, 'datetime', FrozenDateTime)
     monkeypatch.setenv('GITHUB_EVENT_NAME', 'schedule')
-    monkeypatch.setenv('SCHEDULE_CRON', '47 15 * * 1-5')
+    monkeypatch.setenv('SCHEDULE_CRON', '47 6 * * 1-5')
     monkeypatch.setenv('TRADE_DATE', '2026-10-29')
     monkeypatch.setenv('DRY_RUN', 'false')
     monkeypatch.setattr(run, 'MarketData', lambda: pytest.fail('no market access'))

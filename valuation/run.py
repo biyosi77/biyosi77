@@ -15,7 +15,7 @@ from .delivery import DeliveryError, DuplicateDelivery, Ledger, Telegram
 from .workbook import MAIN, RAW, build, records
 
 TEMPLATE = Path(__file__).parent / "template" / "2027_valuation_20261020_133.xlsx"
-CLOSE_CRON = "47 15 * * 1-5"
+CLOSE_CRON = "47 6 * * 1-5"
 
 
 def flag(value):
@@ -156,6 +156,10 @@ def main(argv=None):
             raise ValueError("resend requires an explicit manual send run")
         day = date.fromisoformat(args.trade_date)
         now = datetime.now(KST)
+        log["delivery_deadline_kst"] = datetime.combine(day, clock_time(17), tzinfo=KST).isoformat()
+        if schedule_cron:
+            expected = datetime.combine(day, clock_time(15, 47), tzinfo=KST)
+            log["schedule_delay_seconds"] = max(0, int((now - expected).total_seconds()))
         if schedule_cron and day != scheduled_target(now, schedule_cron)[1]:
             log["status"] = "stale_schedule_skipped"
             write_log(folder, "run.json", log)
@@ -232,7 +236,10 @@ def main(argv=None):
             day, args.slot, summary, args.test_send,
             delayed=datetime.now(KST).time() > clock_time(17, 0)))
         ledger.complete(key, claim, message_id)
-        log.update({"status": "sent", "telegram_message_id": message_id})
+        sent_at = datetime.now(KST)
+        log.update({"status": "sent", "telegram_message_id": message_id,
+                    "sent_at": sent_at.isoformat(timespec="seconds"),
+                    "delivery_deadline_met": sent_at <= datetime.combine(day, clock_time(17), tzinfo=KST)})
         write_log(folder, "run.json", log)
         print(json.dumps(log, ensure_ascii=False))
         return 0
