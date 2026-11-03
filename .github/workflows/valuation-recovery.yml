@@ -1,0 +1,12 @@
+name: Valuation close recovery
+on:
+  schedule:
+    # UTC 07:17/07:37 = KST 16:17/16:37.
+    - cron: '17,37 7 * * 1-5'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  recovery:
+    uses: ./.github/workflows/valuation.yml
+    secrets: inherit

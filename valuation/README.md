@@ -48,3 +48,9 @@ sent/market_closed 기록은 수집 전에 종료하며, sending 기록은 응�
 11월 3일 조사에서는 workflow active 상태와 당일 schedule 실행 부재를 확인했습니다.
 GitHub 내부 누락 원인은 API 기록으로 확정할 수 없습니다. 복구 확인도 같은 GitHub 예약 서비스에 의존하므로 17시 도착을 보장하지 않습니다.
 Actions에서 schedule 이벤트와 run.json의 sent_at, delivery_deadline_met를 확인하세요.
+
+복구 확인은 valuation-recovery.yml의 별도 예약으로 등록됩니다.
+valuation.yml을 재사용 호출하며, 같은 전송 기록과 동시 실행 잠금을 사용합니다.
+복구 워크플로 수동 실행은 오늘 close에 대해 미전송 상태만 복구합니다.
+이미 전송 또는 휴장 기록이 있으면 가격 수집 전에 종료합니다.
+서로 다른 예약 등록을 사용하지만 GitHub 예약 서비스 전체의 장애에는 함께 영향을 받을 수 있습니다.
