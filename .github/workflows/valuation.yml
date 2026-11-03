@@ -5,6 +5,8 @@ on:
     # Same-day regular-session close; verify exact KIS KRX(J) 15:30 minute bars.
     # Explicit UTC: 06:47 UTC = 15:47 Asia/Seoul, Monday-Friday.
     - cron: '47 6 * * 1-5'
+    # 16:17/16:37 KST recovery checks; durable ledger skips delivered dates.
+    - cron: '17,37 7 * * 1-5'
   workflow_dispatch:
     inputs:
       trade_date:
@@ -43,7 +45,7 @@ concurrency:
 jobs:
   valuation:
     runs-on: ubuntu-latest
-    timeout-minutes: 75
+    timeout-minutes: 25
     env:
       TZ: Asia/Seoul
       TRADE_DATE: ${{ inputs.trade_date }}

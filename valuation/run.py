@@ -36,7 +36,7 @@ def latest_scheduled_day(now, slot):
 
 
 def scheduled_target(now, cron):
-    if cron == CLOSE_CRON:
+    if cron in (CLOSE_CRON, "17,37 7 * * 1-5"):
         return "close", latest_scheduled_day(now, "close")
     raise ValueError("unrecognized valuation schedule")
 

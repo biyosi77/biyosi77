@@ -560,3 +560,31 @@ def test_empty_krx_on_open_day_fails_without_second_price_collection(monkeypatch
                      '--output-dir', str(tmp_path)]) == 1
     assert price_calls == [date(2026, 10, 30)]
     assert 'empty or not yet published' in json.loads((tmp_path / 'run.json').read_text())['error']
+
+@pytest.mark.parametrize("hour,minute", [(16,17),(16,37),(18,10)])
+def test_recovery_schedule_uses_same_close(hour, minute):
+    from zoneinfo import ZoneInfo
+    assert scheduled_target(datetime(2026,11,3,hour,minute,tzinfo=ZoneInfo("Asia/Seoul")),
+                            "17,37 7 * * 1-5") == ("close", date(2026,11,3))
+
+
+def test_recovery_skips_sent_day_before_market_access(monkeypatch, tmp_path):
+    import valuation.run as run
+    class FrozenDateTime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return cls(2026,11,3,16,37,tzinfo=tz)
+    class SentLedger:
+        def read(self,key):
+            assert key == "20261103_close"
+            return {"status":"sent"}, "sha"
+    monkeypatch.setattr(run,"datetime",FrozenDateTime)
+    monkeypatch.setattr(run,"Ledger",SentLedger)
+    monkeypatch.setattr(run,"MarketData",lambda: pytest.fail("No repeat market access"))
+    monkeypatch.setenv("GITHUB_EVENT_NAME","schedule")
+    monkeypatch.setenv("SCHEDULE_CRON","17,37 7 * * 1-5")
+    monkeypatch.setenv("TRADE_DATE","")
+    monkeypatch.setenv("DRY_RUN","false")
+    monkeypatch.setenv("RESEND","false")
+    assert run.main(["--output-dir",str(tmp_path)]) == 0
+    assert json.loads((tmp_path/"run.json").read_text())["status"] == "duplicate_blocked"
