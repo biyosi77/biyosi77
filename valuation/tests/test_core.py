@@ -157,7 +157,7 @@ def test_reference_time_guard():
     with pytest.raises(ValueError):
         enforce_time(DAY, "close", datetime(2026, 10, 15, 15, 39, tzinfo=kst))
     enforce_time(DAY, "1130", datetime(2026, 10, 15, 12, 0, tzinfo=kst))
-    assert latest_scheduled_day(datetime(2026, 10, 30, 15, 47, tzinfo=kst), "close") == date(2026, 10, 30)
+    assert latest_scheduled_day(datetime(2026, 10, 30, 16, 0, tzinfo=kst), "close") == date(2026, 10, 30)
     assert latest_scheduled_day(datetime(2026, 10, 31, 0, 30, tzinfo=kst), "close") == date(2026, 10, 30)
     with pytest.raises(ValueError, match="only close"):
         latest_scheduled_day(datetime(2026, 10, 31, 10, 47, tzinfo=kst), "1130")
@@ -165,11 +165,11 @@ def test_reference_time_guard():
 
 def test_single_schedule_targets_same_day_close():
     kst = ZoneInfo("Asia/Seoul")
-    cron = "47 6 * * 1-5"
-    utc_trigger = datetime(2026, 11, 2, 6, 47, tzinfo=ZoneInfo("UTC"))
-    assert utc_trigger.astimezone(kst).hour == 15
+    cron = "0 7 * * 1-5"
+    utc_trigger = datetime(2026, 11, 2, 7, 0, tzinfo=ZoneInfo("UTC"))
+    assert utc_trigger.astimezone(kst).hour == 16
     assert scheduled_target(utc_trigger.astimezone(kst), cron) == ("close", date(2026, 11, 2))
-    assert scheduled_target(datetime(2026, 10, 30, 15, 47, tzinfo=kst), cron) == ("close", date(2026, 10, 30))
+    assert scheduled_target(datetime(2026, 10, 30, 16, 0, tzinfo=kst), cron) == ("close", date(2026, 10, 30))
     assert scheduled_target(datetime(2026, 10, 31, 0, 30, tzinfo=kst), cron) == ("close", date(2026, 10, 30))
     assert scheduled_target(datetime(2026, 11, 2, 16, 0, tzinfo=kst), cron) == ("close", date(2026, 11, 2))
     with pytest.raises(ValueError, match="unrecognized"):
@@ -181,10 +181,10 @@ def test_schedule_parser_keeps_resolved_close_with_empty_env(monkeypatch):
     class FrozenDateTime(datetime):
         @classmethod
         def now(cls, tz=None):
-            return cls(2026, 10, 30, 15, 50, tzinfo=tz)
+            return cls(2026, 10, 30, 16, 5, tzinfo=tz)
     monkeypatch.setattr(run, "datetime", FrozenDateTime)
     monkeypatch.setenv("GITHUB_EVENT_NAME", "schedule")
-    monkeypatch.setenv("SCHEDULE_CRON", "47 6 * * 1-5")
+    monkeypatch.setenv("SCHEDULE_CRON", "0 7 * * 1-5")
     monkeypatch.setenv("SLOT", "")
     monkeypatch.setenv("TRADE_DATE", "")
     args = run.argument_parser().parse_args([])
@@ -502,10 +502,10 @@ def test_stale_schedule_skips_before_market_or_ledger(monkeypatch, tmp_path):
     import valuation.run as run
     class FrozenDateTime(datetime):
         @classmethod
-        def now(cls, tz=None): return cls(2026, 10, 30, 15, 50, tzinfo=tz)
+        def now(cls, tz=None): return cls(2026, 10, 30, 16, 5, tzinfo=tz)
     monkeypatch.setattr(run, 'datetime', FrozenDateTime)
     monkeypatch.setenv('GITHUB_EVENT_NAME', 'schedule')
-    monkeypatch.setenv('SCHEDULE_CRON', '47 6 * * 1-5')
+    monkeypatch.setenv('SCHEDULE_CRON', '0 7 * * 1-5')
     monkeypatch.setenv('TRADE_DATE', '2026-10-29')
     monkeypatch.setenv('DRY_RUN', 'false')
     monkeypatch.setattr(run, 'MarketData', lambda: pytest.fail('no market access'))
@@ -608,7 +608,7 @@ def test_early_runner_waits_without_api_and_pins_date(monkeypatch):
     monkeypatch.setenv("TRADE_DATE","")
     monkeypatch.setattr(run,"MarketData",lambda: pytest.fail("No API while waiting"))
     run.wait_for_close()
-    assert current[0].hour == 15 and current[0].minute == 47
+    assert current[0].hour == 16 and current[0].minute == 0
     assert max(sleeps) <= 60
     assert run.os.environ["TRADE_DATE"] == "2026-11-05"
     assert run.scheduled_target(current[0],run.EARLY_CRON) == ("close",date(2026,11,5))

@@ -16,7 +16,7 @@ from .delivery import DeliveryError, DuplicateDelivery, Ledger, Telegram
 from .workbook import MAIN, RAW, build, records
 
 TEMPLATE = Path(__file__).parent / "template" / "2027_valuation_20261020_133.xlsx"
-CLOSE_CRON = "47 6 * * 1-5"
+CLOSE_CRON = "0 7 * * 1-5"
 EARLY_CRON = "17 2,3 * * 1-5"
 
 
@@ -25,10 +25,10 @@ def flag(value):
 
 
 def latest_scheduled_day(now, slot):
-    """Resolve the same trading calendar day's close after the 15:47 run."""
+    """Resolve the same trading calendar day's close after the 16:00 run."""
     if slot != "close":
         raise ValueError("only close has a scheduled target")
-    trigger = clock_time(15, 47)
+    trigger = clock_time(16, 0)
     candidate = now.date()
     if now.time() < trigger:
         candidate -= timedelta(days=1)
@@ -54,7 +54,7 @@ def wait_for_close():
     day = started.date()
     if day.weekday() >= 5:
         raise ValueError("early schedule arrived on a weekend")
-    target = datetime.combine(day, clock_time(15, 47), tzinfo=KST)
+    target = datetime.combine(day, clock_time(16, 0), tzinfo=KST)
     seconds = max(0, (target - started).total_seconds())
     if seconds > 5 * 60 * 60:
         raise ValueError("early schedule outside supported waiting window")
@@ -184,7 +184,7 @@ def main(argv=None):
         now = datetime.now(KST)
         log["delivery_deadline_kst"] = datetime.combine(day, clock_time(17), tzinfo=KST).isoformat()
         if schedule_cron:
-            expected = datetime.combine(day, clock_time(15, 47), tzinfo=KST)
+            expected = datetime.combine(day, clock_time(16, 0), tzinfo=KST)
             log["schedule_delay_seconds"] = max(0, int((now - expected).total_seconds()))
         if schedule_cron and day != scheduled_target(now, schedule_cron)[1]:
             log["status"] = "stale_schedule_skipped"
