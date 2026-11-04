@@ -588,3 +588,34 @@ def test_recovery_skips_sent_day_before_market_access(monkeypatch, tmp_path):
     monkeypatch.setenv("RESEND","false")
     assert run.main(["--output-dir",str(tmp_path)]) == 0
     assert json.loads((tmp_path/"run.json").read_text())["status"] == "duplicate_blocked"
+
+def test_early_runner_waits_without_api_and_pins_date(monkeypatch):
+    import valuation.run as run
+    from datetime import timedelta
+    from zoneinfo import ZoneInfo
+    current = [datetime(2026,11,5,11,17,tzinfo=ZoneInfo("Asia/Seoul"))]
+    class Clock(datetime):
+        @classmethod
+        def now(cls,tz=None): return current[0]
+    sleeps=[]
+    def sleep(seconds):
+        sleeps.append(seconds)
+        current[0] += timedelta(seconds=seconds)
+    monkeypatch.setattr(run,"datetime",Clock)
+    monkeypatch.setattr(run.time,"sleep",sleep)
+    monkeypatch.setenv("GITHUB_EVENT_NAME","schedule")
+    monkeypatch.setenv("SCHEDULE_CRON",run.EARLY_CRON)
+    monkeypatch.setenv("TRADE_DATE","")
+    monkeypatch.setattr(run,"MarketData",lambda: pytest.fail("No API while waiting"))
+    run.wait_for_close()
+    assert current[0].hour == 15 and current[0].minute == 47
+    assert max(sleeps) <= 60
+    assert run.os.environ["TRADE_DATE"] == "2026-11-05"
+    assert run.scheduled_target(current[0],run.EARLY_CRON) == ("close",date(2026,11,5))
+
+
+def test_manual_run_never_waits(monkeypatch):
+    import valuation.run as run
+    monkeypatch.setenv("GITHUB_EVENT_NAME","workflow_dispatch")
+    monkeypatch.setattr(run.time,"sleep",lambda _: pytest.fail("manual run must not wait"))
+    run.wait_for_close()

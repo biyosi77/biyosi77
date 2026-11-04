@@ -5,6 +5,8 @@ on:
     # Same-day regular-session close; verify exact KIS KRX(J) 15:30 minute bars.
     # Explicit UTC: 06:47 UTC = 15:47 Asia/Seoul, Monday-Friday.
     - cron: '47 6 * * 1-5'
+    # Start runners early at 11:17/12:17 KST and wait locally for the same close.
+    - cron: '17 2,3 * * 1-5'
   workflow_call:
   workflow_dispatch:
     inputs:
@@ -44,7 +46,7 @@ concurrency:
 jobs:
   valuation:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: ${{ github.event.schedule == '17 2,3 * * 1-5' && 330 || 25 }}
     env:
       TZ: Asia/Seoul
       TRADE_DATE: ${{ inputs.trade_date }}

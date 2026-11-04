@@ -5,6 +5,7 @@ import argparse
 import json
 import os
 import sys
+import time
 from datetime import date, datetime, time as clock_time, timedelta
 from pathlib import Path
 
@@ -16,6 +17,7 @@ from .workbook import MAIN, RAW, build, records
 
 TEMPLATE = Path(__file__).parent / "template" / "2027_valuation_20261020_133.xlsx"
 CLOSE_CRON = "47 6 * * 1-5"
+EARLY_CRON = "17 2,3 * * 1-5"
 
 
 def flag(value):
@@ -36,9 +38,33 @@ def latest_scheduled_day(now, slot):
 
 
 def scheduled_target(now, cron):
+    if cron == EARLY_CRON:
+        return "close", now.date()
     if cron in (CLOSE_CRON, "17,37 7 * * 1-5"):
         return "close", latest_scheduled_day(now, "close")
     raise ValueError("unrecognized valuation schedule")
+
+
+
+def wait_for_close():
+    """An already running runner waits locally, without market/API polling."""
+    if os.getenv("GITHUB_EVENT_NAME") != "schedule" or os.getenv("SCHEDULE_CRON") != EARLY_CRON:
+        return
+    started = datetime.now(KST)
+    day = started.date()
+    if day.weekday() >= 5:
+        raise ValueError("early schedule arrived on a weekend")
+    target = datetime.combine(day, clock_time(15, 47), tzinfo=KST)
+    seconds = max(0, (target - started).total_seconds())
+    if seconds > 5 * 60 * 60:
+        raise ValueError("early schedule outside supported waiting window")
+    os.environ["TRADE_DATE"] = day.isoformat()
+    print(f"Runner ready for {day} close; waiting until {target.isoformat()}", flush=True)
+    while datetime.now(KST) < target:
+        remaining = (target - datetime.now(KST)).total_seconds()
+        time.sleep(max(0, min(60, remaining)))
+    if datetime.now(KST).date() != day:
+        raise ValueError("waiting runner crossed the target trading date")
 
 
 def argument_parser():
@@ -263,4 +289,5 @@ def main(argv=None):
 
 
 if __name__ == "__main__":
+    wait_for_close()
     raise SystemExit(main())
