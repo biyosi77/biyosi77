@@ -20,9 +20,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: python -m pip install requests
+      - run: python -m pip install requests reportlab pypdf
       - name: Validate date, closes, and cash-flow units
-        run: python -m unittest -v market_flow.test_collect market_flow.test_derivatives
+        run: python -m unittest -v market_flow.test_collect market_flow.test_derivatives market_flow.test_daily_brief
 
   probe:
     if: github.event_name == 'workflow_dispatch'
