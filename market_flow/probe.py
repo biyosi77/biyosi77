@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from datetime import date
 from pathlib import Path
 
@@ -76,7 +77,8 @@ def main():
                              "FHPIF05030100", {"FID_COND_MRKT_DIV_CODE": "O",
                              "FID_COND_SCR_DIV_CODE": "20503", "FID_MRKT_CLS_CODE": "CO",
                              "FID_MTRT_CNT": day.strftime("%Y%m"),
-                             "FID_MRKT_CLS_CODE1": "PO"})
+                             "FID_MRKT_CLS_CODE1": "PO",
+                             "FID_COND_MRKT_CLS_CODE": ""})
         for key in ("output1", "output2"):
             rows = payload.get(key, [])
             if isinstance(rows, dict):
@@ -86,6 +88,16 @@ def main():
                  "optn_delta", "optn_gama", "acml_vol", "hts_otst_stpl_qty"))
     except Exception as exc:
         result["errors"]["option_board"] = type(exc).__name__ + ": " + str(exc)[:120]
+    time.sleep(1.1)
+    try:
+        payload = market.kis("/uapi/domestic-futureoption/v1/quotations/display-board-futures",
+                             "FHPIF05030200", {"FID_COND_MRKT_DIV_CODE": "F",
+                             "FID_COND_SCR_DIV_CODE": "20503",
+                             "FID_COND_MRKT_CLS_CODE": "MKI"})
+        result["kis"]["futures_board"] = compact(payload.get("output", []),
+            ("futs_shrn_iscd", "futs_prpr", "hts_otst_stpl_qty", "acml_vol"), 20)
+    except Exception as exc:
+        result["errors"]["futures_board"] = type(exc).__name__ + ": " + str(exc)[:120]
     out = Path(os.environ.get("PROBE_OUTPUT", "market-flow-probe.json"))
     out.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
     # The selected market data and field names are public, while credentials are
