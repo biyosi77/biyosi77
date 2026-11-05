@@ -169,7 +169,7 @@ def make_pdf(data, output):
               P("당일 순매수는 거래 흐름이며 누적 보유 포지션을 의미하지 않는다.", "tiny"),
               PageBreak(),
               P("옵션 델타·감마 지도", "title"),
-              P("공개 미결제약정 기반 총 민감도. 순포지션의 부호는 확인되지 않음.", "tiny")]
+              P("KRX 종가·내재변동성의 무이자·무배당 Black-Scholes 근사와 공개 미결제약정 기반 총 민감도. 순포지션의 부호는 확인되지 않음.", "tiny")]
     for name in ("KOSPI200", "KOSDAQ150"):
         deriv = data["derivatives"][name]
         levels, gross_delta_bn = gamma_levels(deriv)
