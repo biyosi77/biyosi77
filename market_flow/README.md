@@ -33,7 +33,9 @@ $python = 'C:\Users\PC\.cache\codex-runtimes\codex-primary-runtime\dependencies\
 & $python .\daily_brief.py --input .\data\2026-11-05.json --output .\reports
 ```
 
-발송 전에 사용자 환경변수 `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`를 설정하고 봇을 해당 채널의 게시 권한이 있는 관리자로 추가한다. 발송은 `--send` 옵션을 추가한다. 같은 날짜/같은 PDF의 중복 발송은 발송 영수증 파일로 막는다.
+발송 전에 사용자 환경변수 `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`를 설정하고 봇을 본인만 접근하는 비공개 수신처에 추가한다. `MARKET_FLOW_PRIVATE_RECIPIENT=1`을 명시한 경우에만 `--send`를 사용할 수 있으며 `@채널명` 주소는 차단한다. 같은 날짜/같은 PDF의 중복 발송은 발송 영수증 파일로 막는다.
+
+`@biyosi77`은 공개채널이다. KRX Open API 약관 제11조는 제공 정보를 제3자에게 제공하는 것을 제한하며, KIS Open API 안내는 개인 고객의 시세정보를 본인 투자 목적에만 사용하고 제3자 제공을 금지한다. 현재 API 키로 만든 데이터 PDF를 그 공개채널에 게시하는 경로는 활성화하지 않는다. 별도 재배포 권한이 확인되면 발송 경로를 재검토한다.
 
 데이터가 누락되거나 시각이 맞지 않으면 프로그램은 실패하고 PDF를 전송하지 않는다. PC가 꺼져 있으면 로컬 예약 실행도 작동하지 않는다.
 
@@ -53,4 +55,6 @@ $python = 'C:\Users\PC\.cache\codex-runtimes\codex-primary-runtime\dependencies\
 - KRX Open API 목록: https://openapi.krx.co.kr/contents/OPP/INFO/service/OPPINFO004.cmd
 - KRX 종가 데이터 제공시각: https://openapi.krx.co.kr/contents/OPP/DATA/OPPDATA002.jsp
 - Telegram sendDocument: https://core.telegram.org/bots/api#senddocument
+- KRX Open API 이용약관: https://openapi.krx.co.kr/contents/OPP/INFO/OPPINFO002.jsp
+- KIS Open API 서비스 소개: https://apiportal.koreainvestment.com/about-open-api
 
