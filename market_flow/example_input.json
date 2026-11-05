@@ -1,0 +1,33 @@
+{
+  "date": "2026-11-05",
+  "asof_kst": "2026-11-05T16:20:00",
+  "demo": true,
+  "markets": {
+    "KOSPI": {"close": 3000.0, "prev_close": 2985.0, "foreign_net_bn": -120.0, "institution_net_bn": 85.0, "program_arb_net_bn": -30.0, "program_nonarb_net_bn": 25.0},
+    "KOSDAQ": {"close": 850.0, "prev_close": 857.0, "foreign_net_bn": 45.0, "institution_net_bn": -15.0, "program_arb_net_bn": 5.0, "program_nonarb_net_bn": 20.0}
+  },
+  "derivatives": {
+    "KOSPI200": {
+      "underlying_close": 400.0, "future_close": 401.2, "prev_future_close": 399.0,
+      "foreign_future_net_contracts": -1500, "future_multiplier_krw": 250000,
+      "options": [
+        {"series": "monthly", "kind": "C", "strike": 400, "expiry": "2026-11-12", "oi": 10000, "delta": 0.52, "gamma": 0.022, "option_multiplier_krw": 250000},
+        {"series": "monthly", "kind": "P", "strike": 395, "expiry": "2026-11-12", "oi": 8200, "delta": -0.38, "gamma": 0.019, "option_multiplier_krw": 250000},
+        {"series": "weekly", "kind": "C", "strike": 405, "expiry": "2026-11-09", "oi": 4600, "delta": 0.32, "gamma": 0.028, "option_multiplier_krw": 250000}
+      ]
+    },
+    "KOSDAQ150": {
+      "underlying_close": 1250.0, "future_close": 1253.0, "prev_future_close": 1260.0,
+      "foreign_future_net_contracts": 420, "future_multiplier_krw": 10000,
+      "options": [
+        {"series": "monthly", "kind": "P", "strike": 1250, "expiry": "2026-11-12", "oi": 3700, "delta": -0.51, "gamma": 0.008, "option_multiplier_krw": 10000},
+        {"series": "monthly", "kind": "C", "strike": 1275, "expiry": "2026-11-12", "oi": 2900, "delta": 0.28, "gamma": 0.006, "option_multiplier_krw": 10000},
+        {"series": "weekly", "kind": "P", "strike": 1225, "expiry": "2026-11-09", "oi": 1800, "delta": -0.27, "gamma": 0.01, "option_multiplier_krw": 10000}
+      ]
+    }
+  },
+  "sources": [
+    {"name": "샘플 가상 데이터", "asof_kst": "2026-11-05T16:20:00", "file": "example_input.json"}
+  ]
+}
+
