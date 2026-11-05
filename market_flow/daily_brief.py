@@ -60,17 +60,26 @@ def checked_snapshot(data):
         require(market["close"] > 0 and market["prev_close"] > 0, f"{name} 종가 오류")
     require(set(data["derivatives"]) == {"KOSPI200", "KOSDAQ150"}, "두 파생 지수 자료가 모두 필요합니다")
     for name, deriv in data["derivatives"].items():
+        expected_multiplier = 250000 if name == "KOSPI200" else 10000
         for key in ("underlying_close", "future_close", "prev_future_close", "foreign_future_net_contracts", "future_multiplier_krw"):
             require(isinstance(deriv.get(key), (float, int)), f"{name}.{key} 누락")
-        require(deriv["underlying_close"] > 0 and deriv["future_multiplier_krw"] > 0, f"{name} 지수/승수 오류")
+        require(deriv["underlying_close"] > 0 and deriv["future_close"] > 0
+                and deriv["prev_future_close"] > 0, f"{name} 지수/선물 종가 오류")
+        require(deriv["future_multiplier_krw"] == expected_multiplier,
+                f"{name} 정규 선물 승수 오류")
         require(len(deriv.get("options", [])) > 0, f"{name} 옵션 체인 누락")
+        require({option.get("series") for option in deriv["options"]} == {"monthly", "weekly"},
+                f"{name} 월물/위클리 옵션이 모두 필요합니다")
         for option in deriv["options"]:
             for key in ("strike", "oi", "delta", "gamma", "option_multiplier_krw"):
                 require(isinstance(option.get(key), (int, float)), f"{name} 옵션 {key} 누락")
             require(option["kind"] in ("C", "P") and option["series"] in ("monthly", "weekly"), "옵션 종류 오류")
-            require(option["oi"] >= 0 and option["gamma"] >= 0, "옵션 미결제약정/감마 오류")
-            require(option["option_multiplier_krw"] > 0, "옵션 승수 오류")
-            date.fromisoformat(option["expiry"])
+            require(option["strike"] > 0 and option["oi"] >= 0 and option["gamma"] >= 0,
+                    "옵션 행사가/미결제약정/감마 오류")
+            require(-1 <= option["delta"] <= 1, "옵션 델타 범위 오류")
+            require(option["option_multiplier_krw"] == expected_multiplier,
+                    f"{name} 정규 옵션 승수 오류")
+            require(date.fromisoformat(option["expiry"]) >= trading_date, "만기 지난 옵션이 포함됨")
     return trading_date
 
 
