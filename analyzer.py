@@ -1,174 +1,271 @@
-import sys
+import json
 import logging
-from typing import List, Dict, Any
+from typing import Dict, Any, List
 from google import genai
 from google.genai import types
 from config import GEMINI_API_KEY, GEMINI_MODEL_NAME
 
-if sys.platform == "win32":
-    try:
-        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
-        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
-    except Exception:
-        pass
-
-
 logger = logging.getLogger(__name__)
 
-def _select_representative_videos(videos: List[Dict[str, Any]], max_count: int = 4) -> List[Dict[str, Any]]:
+def _call_gemini_json(prompt: str) -> Any:
     """
-    하단 핵심 영상 링크에 특정 채널만 편중되지 않도록 매경 월가월부(빅머니) 영상을 우선 포함하고,
-    채널별로 고르게 대표 영상을 선택합니다.
-    """
-    selected = []
-    seen_links = set()
-
-    # 1. 매경 월가월부(문지웅의 빅머니) 영상 우선 포함
-    for v in videos:
-        if v.get("channel_name") == "매경 월가월부" and v.get("link") not in seen_links:
-            selected.append(v)
-            seen_links.add(v.get("link"))
-
-    # 2. 각 채널별 대표 영상 1개씩 순차 추가
-    seen_channels = {v.get("channel_name") for v in selected}
-    for v in videos:
-        if len(selected) >= max_count:
-            break
-        ch = v.get("channel_name")
-        link = v.get("link")
-        if ch not in seen_channels and link not in seen_links:
-            selected.append(v)
-            seen_channels.add(ch)
-            seen_links.add(link)
-
-    # 3. 자리가 남으면 나머지 영상 중 순서대로 채움
-    for v in videos:
-        if len(selected) >= max_count:
-            break
-        link = v.get("link")
-        if link not in seen_links:
-            selected.append(v)
-            seen_links.add(link)
-
-    return selected
-
-def generate_daily_investment_report(videos: List[Dict[str, Any]]) -> str:
-    """
-    수집된 지난 24시간 유튜브 영상 정보 목록을 입력 받아 
-    Gemini AI를 활용하여 데일리 투자 리포트를 생성합니다.
+    Gemini API를 호출하여 구조화된 JSON 결과를 반환받습니다.
+    1차: GEMINI_MODEL_NAME, 실패 시 fallback: gemini-flash-latest
     """
     if not GEMINI_API_KEY or GEMINI_API_KEY == "your_gemini_api_key_here":
-        logger.error("GEMINI_API_KEY가 설정되지 않았습니다. .env 파일을 확인해주세요.")
-        return "⚠️ [오류] GEMINI_API_KEY가 설정되지 않아 리포트를 생성할 수 없습니다. .env 파일을 확인해 주세요."
+        raise ValueError("GEMINI_API_KEY가 유효하지 않습니다.")
 
-    if not videos:
-        logger.info("최근 24시간 내 수집된 신규 영상이 없습니다.")
-        return "📊 <b>[데일리 투자 리포트]</b>\n\n지난 24시간 동안 삼프로TV, 한경 코리아마켓, 한경 글로벌마켓, 와이스트릿, 매경 월가월부(빅머니)에서 새롭게 업로드된 영상이 없습니다."
-
-    # 유튜브 영상 데이터 포맷팅
-    video_content_str = ""
-    for idx, video in enumerate(videos, 1):
-        video_content_str += f"{idx}. [{video['channel_name']}] {video['title']}\n"
-        video_content_str += f"   - 링크: {video['link']}\n"
-        if video.get("description"):
-            # 줄바꿈 정리
-            desc_clean = " ".join(video["description"].split())
-            video_content_str += f"   - 요약/설명: {desc_clean[:200]}\n"
-        video_content_str += "\n"
-
-    # Gemini 프롬프트 구성
-    prompt = f"""
-당신은 금융 투자 전문가입니다. 
-아래 수집된 5개 주요 투자 채널(삼프로TV, 한경 코리아마켓, 한경 글로벌마켓, 와이스트릿, 매경 월가월부 '문지웅의 빅머니')의 최근 영상 정보를 바탕으로 정갈하고 가독성이 뛰어난 요약 리포트를 작성해 주세요.
-
----
-수집된 최근 영상 목록:
-{video_content_str}
----
-
-[작성 지침]
-1. 리포트 제목은 반드시 "📊 데일리 투자리포트(요약)"으로 시작하세요.
-2. 마크다운 기호(#, ##, **)나 특수 기호를 사용하지 말고, 제목은 <b>제목</b> 형태의 HTML 태그나 불릿 기호(•) 및 적절한 이모지만 사용하세요.
-3. 리포트는 아래 포인트별로 핵심 메시지를 키워드 중심으로 깔끔하게 작성하세요:
-   - 시장시황
-   - 산업동향
-   - 주요기업 이슈
-   - 거시경제 및 리스크
-   - 매경 월가월부 (문지웅의 빅머니) 핵심 요약 (수집 목록에 매경 월가월부/빅머니 영상이 있을 경우 핵심 내용을 별도 항목으로 요약하고, 없으면 생략)
-4. 리포트 말미에는 반드시 "💡 오늘의 핵심 인사이트" 요약을 작성하세요.
-5. 전체 리포트 분량은 하단 링크를 포함하여 반드시 1,800자 이내가 되도록 작성하세요.
-
-[출력 구조 예시]
-📊 <b>데일리 투자리포트(요약)</b>
-
-<b>1. 시장시황</b>
-• (핵심 키워드 중심 시장 흐름 요약)
-
-<b>2. 산업동향</b>
-• (주목받은 산업 및 섹터 핵심 요약)
-
-<b>3. 주요기업 이슈</b>
-• (대표 기업 핵심 이슈 요약)
-
-<b>4. 거시경제 및 리스크</b>
-• (금리, 환율, 통화정책 등 거시 리스크 핵심 요약)
-
-<b>5. 문지웅의 빅머니 브리핑</b> (해당 영상 존재 시)
-• (월가월부 빅머니 클립 핵심 이슈 및 월가 시각 요약)
-
-💡 <b>오늘의 핵심 인사이트</b>
-• (오늘 꼭 기억해야 할 핵심 인사이트 1줄)
-"""
+    client = genai.Client(api_key=GEMINI_API_KEY)
+    config = types.GenerateContentConfig(
+        response_mime_type="application/json",
+        temperature=0.2
+    )
 
     try:
-        logger.info(f"Gemini API 호출 시작 (모델: {GEMINI_MODEL_NAME})...")
-        client = genai.Client(api_key=GEMINI_API_KEY)
-        
-        # primary model try
-        try:
-            response = client.models.generate_content(
-                model=GEMINI_MODEL_NAME,
-                contents=prompt
-            )
-        except Exception as model_err:
-            logger.warning(f"모델 {GEMINI_MODEL_NAME} 호출 실패 ({model_err}). fallback 모델(gemini-flash-latest)로 시도합니다.")
-            response = client.models.generate_content(
-                model="gemini-flash-latest",
-                contents=prompt
-            )
-
-        report_text = response.text.strip()
-        logger.info("Gemini 리포트 생성 성공.")
-
-        # 핵심 영상 링크만 부록으로 추가 (매경 월가월부 빅머니 포함 상위 핵심 영상 최대 4개)
-        sources_footer = ""
-        if videos:
-            rep_videos = _select_representative_videos(videos, max_count=4)
-            sources_footer = "\n\n🔗 <b>핵심 영상 링크</b>\n"
-            for video in rep_videos:
-                sources_footer += f"• [{video['channel_name']}] {video['title']}\n  {video['link']}\n"
-
-        return report_text + sources_footer
-
+        res = client.models.generate_content(
+            model=GEMINI_MODEL_NAME,
+            contents=prompt,
+            config=config
+        )
+        return json.loads(res.text)
     except Exception as e:
-        logger.error(f"Gemini API 호출 중 오류 발생: {e}")
-        return f"⚠️ <b>[오류]</b> Gemini 리포트 생성 실패: {str(e)}"
+        logger.warning(f"모델 {GEMINI_MODEL_NAME} 호출 실패 ({e}). fallback 모델(gemini-flash-latest)로 재시도합니다.")
+        res = client.models.generate_content(
+            model="gemini-flash-latest",
+            contents=prompt,
+            config=config
+        )
+        return json.loads(res.text)
 
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    sample_videos = [
-        {
-            "channel_name": "삼프로TV",
-            "title": "[시황] 코스피 반등 성공? 반도체와 이차전지 수급 집중 분석",
-            "link": "https://www.youtube.com/watch?v=sample1",
-            "description": "오늘 주식시장에서 코스피가 반등세를 나타냈습니다."
-        },
-        {
-            "channel_name": "매경 월가월부",
-            "title": "[문지웅의 빅머니] 월가 큰손들이 주목한 AI 전력주와 연준 금리 시나리오",
-            "link": "https://www.youtube.com/watch?v=sample2",
-            "description": "뉴욕증시 마감 브리핑과 빅머니 흐름을 짚어봅니다."
-        }
-    ]
-    print("--- Test Daily Report Generation ---")
-    print(generate_daily_investment_report(sample_videos))
+def generate_daily_5page_report(materials: Dict[str, Any], date_str: str) -> List[Dict[str, Any]]:
+    """
+    수집된 3대 채널 5개 파트 자료를 [현상 ➔ 원인·배경 ➔ 구체적 종목/섹터 특징 ➔ 향후 영향·전망] 프레임워크로 분석하여
+    정확히 5페이지 PDF를 위한 구조화된 데이터를 생성합니다.
+    """
+    # 텍스트 컨텍스트 구성
+    context = ""
+    for k, v in materials.items():
+        if v:
+            context += f"\n=== [프로그램: {k} | 제목: {v['title']}] ===\n"
+            context += f"링크: {v['link']}\n"
+            if v.get("transcript"):
+                context += f"자막 발췌: {v['transcript'][:15000]}\n"
+            else:
+                context += f"설명 요약: {v.get('description', '')}\n"
+
+    prompt = f"""
+당신은 대한민국 최고 수준의 기관 투자 리서치 센터장입니다.
+아래 제공된 수집 자료(매경 월가월부 문지웅의 빅머니, 삼프로TV 4대 코너, 체슬리TV 모닝브리프)를 바탕으로
+총 5페이지 분량의 [데일리 마스터 투자 리포트]를 작성해야 합니다.
+
+[분석 핵심 원칙]
+단순한 헤드라인 요약이나 피상적인 나열을 절대 금지합니다.
+각 섹션마다 다음 4단계 구조화 분석을 매우 구체적으로 작성하세요:
+1. [현상 및 지표 움직임 (What)]: 구체적 수치(지수, 금리, 환율, 등락률 등)와 시장 수급 동향
+2. [구조적 원인 및 배경 (Why)]: 발표된 거시 지표, 연준 발언, 기업 가이던스, 지정학적 배경 등
+3. [구체적 종목 및 섹터 특징 (Stocks)]: 언급된 대표 기업명(티커), 등락 이유, 밸류에이션 변화 팩트체크
+4. [향후 영향·전망 및 실전 운용 전략 (Outlook & Strategy)]: 전문가들이 제시한 지수 하단, 교체 매매 기준, 포트폴리오 비중 전략
+
+반드시 아래 JSON 스키마를 만족하는 리스트 형태로 반환하세요:
+[
+  {{
+    "header_title": "매경 월가월부 | 문지웅의 빅머니",
+    "subtitle": "{date_str} 뉴욕 현지 시각 & 월가 스마트머니 동향",
+    "sections": [
+      {{
+        "title": "뉴욕 3대 지수 & 핵심 매크로 지표 변동 현상",
+        "bullets": ["<b>지수 & 금리 흐름</b>: ...", "<b>환율 & 원자재</b>: ...", "<b>수급 쏠림</b>: ..."]
+      }},
+      {{
+        "title": "현지 특파원 시각: 구조적 원인 & 월가 큰손 자금 흐름",
+        "bullets": ["<b>연준 통화정책 기대감</b>: ...", "<b>인플레이션 & 경기 지표</b>: ...", "<b>기관 자금 이동</b>: ..."]
+      }},
+      {{
+        "title": "M7 및 주요 개별 종목 구체적 특징점",
+        "bullets": ["<b>대표 종목 A</b>: ...", "<b>대표 종목 B</b>: ...", "<b>실적 가이던스 요약</b>: ..."]
+      }},
+      {{
+        "title": "뉴욕 증시 향후 전망 및 주요 관전 포인트",
+        "bullets": ["<b>단기 리스크 요인</b>: ...", "<b>실전 대응 전략</b>: ..."]
+      }}
+    ],
+    "footer_link": "{materials.get('big_money', {}).get('link', '') if materials.get('big_money') else ''}"
+  }},
+  {{
+    "header_title": "삼프로TV | 월스트리트 모닝 & 마켓인사이드",
+    "subtitle": "{date_str} 글로벌 매크로 & 산업 구조 분석",
+    "sections": [
+      {{
+        "title": "[월스트리트 모닝] 글로벌 채권·외환 시장 및 IB 자산 배분",
+        "bullets": ["<b>글로벌 금리 환경</b>: ...", "<b>주요 IB 하우스 뷰</b>: ..."]
+      }},
+      {{
+        "title": "[마켓인사이드] 글로벌 공급망 재편 및 산업 구조 변화",
+        "bullets": ["<b>핵심 산업 사이클</b>: ...", "<b>원자재 & 통상 환경</b>: ..."]
+      }},
+      {{
+        "title": "[마켓인사이드] 주요국 정책 변화와 국내 수출 기업 영향",
+        "bullets": ["<b>국내 파급 영향</b>: ...", "<b>전략적 대응 방안</b>: ..."]
+      }}
+    ],
+    "footer_link": "{materials.get('sampro_morning', {}).get('link', '') if materials.get('sampro_morning') else ''}"
+  }},
+  {{
+    "header_title": "삼프로TV | 클로징벨 라이브 & 여의도 인사이트",
+    "subtitle": "{date_str} 국내 증시 마감 복기 & 기관 전문가 전략",
+    "sections": [
+      {{
+        "title": "[클로징벨] 전일 국내 증시 마감 & 외국인·기관 수급 복기",
+        "bullets": ["<b>코스피/코스닥 마감</b>: ...", "<b>수급 주체별 매매 동향</b>: ..."]
+      }},
+      {{
+        "title": "[클로징벨] 당일 주도 섹터 vs 소외 섹터 종목별 등락 요인",
+        "bullets": ["<b>주도 섹터(상승)</b>: ...", "<b>조정 섹터(하락)</b>: ..."]
+      }},
+      {{
+        "title": "[여의도 인사이트] 여의도 기관 운용역 심층 인터뷰 & 밸류에이션",
+        "bullets": ["<b>핵심 논점 및 논리</b>: ...", "<b>실적 턴어라운드 종목 선별 기준</b>: ..."]
+      }},
+      {{
+        "title": "[여의도 인사이트] 실전 포트폴리오 리밸런싱 전략 제언",
+        "bullets": ["<b>지수 하단 지지력</b>: ...", "<b>현금 비중 및 분할 매수 팁</b>: ..."]
+      }}
+    ],
+    "footer_link": "{materials.get('sampro_closing', {}).get('link', '') if materials.get('sampro_closing') else ''}"
+  }},
+  {{
+    "header_title": "체슬리TV | 체슬리 모닝브리프 (Part 1)",
+    "subtitle": "{date_str} 박세익 전무의 매크로 나침반 & 펀드 운용 철학",
+    "sections": [
+      {{
+        "title": "박세익 전무의 매크로 나침반: 시장 위치 & 심리 지표 점검",
+        "bullets": ["<b>시장 국면 진단</b>: ...", "<b>역사적 밸류에이션 밴드</b>: ...", "<b>공포·탐욕 지표</b>: ..."]
+      }},
+      {{
+        "title": "팀 체슬리 펀드 운용 원칙 및 현금 비중 가이드",
+        "bullets": ["<b>현금 비중 원칙</b>: ...", "<b>자산 배분 프레임워크</b>: ..."]
+      }},
+      {{
+        "title": "펀드매니저 실시간 운용회의 3대 핵심 토론 & 팩트체크",
+        "bullets": ["<b>핵심 화두 1</b>: ...", "<b>핵심 화두 2</b>: ...", "<b>시장 오해와 진실</b>: ..."]
+      }}
+    ],
+    "footer_link": "{materials.get('chesley_morning', {}).get('link', '') if materials.get('chesley_morning') else ''}"
+  }},
+  {{
+    "header_title": "체슬리TV | 체슬리 모닝브리프 (Part 2)",
+    "subtitle": "{date_str} 섹터별 딥다이브 & 실전 교체 매매(Swap) 전략",
+    "sections": [
+      {{
+        "title": "핵심 섹터별 펀더멘털 점검 (반도체/AI/전력/2차전지/바이오/금융)",
+        "bullets": ["<b>주도 섹터 코멘트</b>: ...", "<b>바닥 통과 섹터 코멘트</b>: ..."]
+      }},
+      {{
+        "title": "구체적 종목별 특징점 및 체슬리 관심 종목군",
+        "bullets": ["<b>종목 1</b>: ...", "<b>종목 2</b>: ...", "<b>종목 3</b>: ..."]
+      }},
+      {{
+        "title": "펀드매니저 실전 운용 조언: 교체 매매(Swap) & 분할 매수 전략",
+        "bullets": ["<b>약세장 대응 원칙</b>: ...", "<b>핵심 코어 종목 비중 조절</b>: ..."]
+      }},
+      {{
+        "title": "💡 오늘의 핵심 투자 격언 (Takeaway)",
+        "bullets": ["<b>원라인 메시지</b>: ..."]
+      }}
+    ],
+    "footer_link": "{materials.get('chesley_morning', {}).get('link', '') if materials.get('chesley_morning') else ''}"
+  }}
+]
+
+각 페이지의 bullets는 bullet 당 1~2문장으로 매우 밀도 있고 명확하게 작성하세요.
+HTML 태그는 <b>키워드</b>만 사용하세요.
+
+자료:
+{context}
+"""
+    logger.info("Gemini를 통한 5-Page 데일리 리포트 데이터 생성 호출 중...")
+    pages = _call_gemini_json(prompt)
+    if not isinstance(pages, list) or len(pages) != 5:
+        logger.warning(f"Gemini 반환 페이지 수 불일치 ({len(pages)}개). 5개 페이지로 보정합니다.")
+        while len(pages) < 5:
+            pages.append({
+                "header_title": "데일리 투자 인사이트",
+                "subtitle": date_str,
+                "sections": [{"title": "보조 브리핑", "bullets": ["<b>자료 준비 중</b>: 상세 분석 데이터 정리."]}]
+            })
+        pages = pages[:5]
+    return pages
+
+def generate_weekend_2page_report(materials: Dict[str, Any], date_str: str) -> List[Dict[str, Any]]:
+    """
+    주말 체슬리TV '별주부전' 풀영상을 바탕으로 2페이지 심층 분석 데이터를 생성합니다.
+    """
+    v = materials.get("chesley_weekend")
+    context = ""
+    if v:
+        context += f"제목: {v['title']}\n링크: {v['link']}\n"
+        context += f"자막 발췌: {v.get('transcript', '')[:25000]}\n"
+
+    prompt = f"""
+당신은 대한민국 최고 수준의 기관 투자 리서치 센터장입니다.
+아래 제공된 체슬리TV 주말 특집 [별주부전] 풀영상 자료를 바탕으로
+총 2페이지 분량의 [별주부전 주말 심층 스터디 리포트]를 작성해야 합니다.
+
+[작성 지침]
+Page 1: 메가트렌드 산업 구조 분석 및 글로벌 밸류체인 해부
+Page 2: 집중 분석 종목(Top-picks) 펀더멘털 및 3~5년 중장기 투자 로드맵
+
+반드시 2개 항목으로 구성된 JSON 리스트로 반환하세요:
+[
+  {{
+    "header_title": "체슬리TV | 주말특집 별주부전 (Part 1)",
+    "subtitle": "{date_str} 메가트렌드 특강 & 글로벌 산업 밸류체인 해부",
+    "sections": [
+      {{
+        "title": "금주의 메가트렌드 테마: 산업 패러다임 변화와 배경",
+        "bullets": ["<b>테마 선정 배경</b>: ...", "<b>시장 규모(TAM) & 성장률</b>: ..."]
+      }},
+      {{
+        "title": "글로벌 산업 밸류체인 해부 & 독점적 해자(Moat)",
+        "bullets": ["<b>원천 기술 및 진입장벽</b>: ...", "<b>글로벌 1위 기업의 경쟁력</b>: ..."]
+      }},
+      {{
+        "title": "매크로 변수(금리·환율·정책)와 산업 사이클의 상관관계",
+        "bullets": ["<b>거시 경제 파급 효과</b>: ...", "<b>정책적 수혜 요인</b>: ..."]
+      }}
+    ],
+    "footer_link": "{v.get('link', '') if v else ''}"
+  }},
+  {{
+    "header_title": "체슬리TV | 주말특집 별주부전 (Part 2)",
+    "subtitle": "{date_str} 집중 분석 기업 펀더멘털 & 중장기 실전 로드맵",
+    "sections": [
+      {{
+        "title": "집중 분석 기업(Top-picks) 펀더멘털 & 질적 실적 분석",
+        "bullets": ["<b>핵심 기업 A 비즈니스 모델</b>: ...", "<b>핵심 기업 B 성장 모멘텀</b>: ..."]
+      }},
+      {{
+        "title": "밸류에이션 매력도 & 다운사이드 리스크 점검",
+        "bullets": ["<b>Peer 대비 할인율</b>: ...", "<b>리스크 요인 & 모니터링 체크리스트</b>: ..."]
+      }},
+      {{
+        "title": "박세익 전무의 별주부전 3~5년 중장기 투자 로드맵",
+        "bullets": ["<b>분할 매수 밴드</b>: ...", "<b>목표 수익률 및 분할 매도 원칙</b>: ...", "<b>핵심 지표(KPI)</b>: ..."]
+      }},
+      {{
+        "title": "💡 주말 스터디 결론 (Closing Message)",
+        "bullets": ["<b>핵심 인사이트</b>: ..."]
+      }}
+    ],
+    "footer_link": "{v.get('link', '') if v else ''}"
+  }}
+]
+
+자료:
+{context}
+"""
+    logger.info("Gemini를 통한 2-Page 주말 별주부전 리포트 데이터 생성 호출 중...")
+    pages = _call_gemini_json(prompt)
+    if not isinstance(pages, list) or len(pages) != 2:
+        pages = pages[:2] if len(pages) >= 2 else pages + [pages[0]]
+    return pages
