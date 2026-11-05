@@ -248,7 +248,12 @@ def main(argv=None):
         else:
             previous_day, previous = prior_close(market, rows, day)
             consensus = fetch_consensus(rows, day)
-            summary = build_expanded(TEMPLATE, out, day, quotes, previous_day, previous, consensus)
+            baseline = folder / ".verified-close-baseline.xlsx"
+            try:
+                build(TEMPLATE, baseline, day, args.slot, quotes)
+                summary = build_expanded(baseline, out, day, quotes, previous_day, previous, consensus)
+            finally:
+                baseline.unlink(missing_ok=True)
         log.update({"status": "validated", "file": out.name, **summary,
                     "checked_at": datetime.now(KST).isoformat(timespec="seconds")})
         write_log(folder, "run.json", log)
