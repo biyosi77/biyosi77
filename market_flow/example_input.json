@@ -26,6 +26,24 @@
       ]
     }
   },
+  "history": [
+    {"date": "2026-10-30", "markets": {
+      "KOSPI": {"close": 2950, "prev_close": 2940, "foreign_net_bn": -80, "program_arb_net_bn": -20, "program_nonarb_net_bn": 0},
+      "KOSDAQ": {"close": 865, "prev_close": 870, "foreign_net_bn": 20, "program_arb_net_bn": 10, "program_nonarb_net_bn": 5}
+    }},
+    {"date": "2026-11-02", "markets": {
+      "KOSPI": {"close": 2960, "prev_close": 2950, "foreign_net_bn": -60, "program_arb_net_bn": -10, "program_nonarb_net_bn": 5},
+      "KOSDAQ": {"close": 862, "prev_close": 865, "foreign_net_bn": 25, "program_arb_net_bn": 5, "program_nonarb_net_bn": 8}
+    }},
+    {"date": "2026-11-03", "markets": {
+      "KOSPI": {"close": 2970, "prev_close": 2960, "foreign_net_bn": 20, "program_arb_net_bn": 5, "program_nonarb_net_bn": 5},
+      "KOSDAQ": {"close": 860, "prev_close": 862, "foreign_net_bn": 40, "program_arb_net_bn": 2, "program_nonarb_net_bn": 10}
+    }},
+    {"date": "2026-11-04", "markets": {
+      "KOSPI": {"close": 2985, "prev_close": 2970, "foreign_net_bn": -40, "program_arb_net_bn": -15, "program_nonarb_net_bn": 5},
+      "KOSDAQ": {"close": 857, "prev_close": 860, "foreign_net_bn": -10, "program_arb_net_bn": -5, "program_nonarb_net_bn": 0}
+    }}
+  ],
   "sources": [
     {"name": "샘플 가상 데이터", "asof_kst": "2026-11-05T16:20:00", "file": "example_input.json"}
   ]
