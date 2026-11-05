@@ -140,11 +140,19 @@ def main():
             for key, value in derivatives.items()}
     except Exception as exc:
         result["errors"]["derivative_collector"] = type(exc).__name__ + ": " + str(exc)[:120]
+    sanitized = {
+        "date": result["date"],
+        "krx": {name: {"available": True, "fields": value.get("fields", [])}
+                for name, value in result["krx"].items()},
+        "kis": {name: {"available": True, "fields": value.get("fields", [])}
+                for name, value in result["kis"].items()},
+        "cash_collector_ready": "collector" in result,
+        "derivative_collector_ready": "derivative_collector" in result,
+        "errors": result["errors"],
+    }
     out = Path(os.environ.get("PROBE_OUTPUT", "market-flow-probe.json"))
-    out.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
-    # The selected market data and field names are public, while credentials are
-    # never included in this result. Logs allow reviewing without artifact ZIP access.
-    print(json.dumps(result, ensure_ascii=False))
+    out.write_text(json.dumps(sanitized, ensure_ascii=False, indent=2), encoding="utf-8")
+    print(json.dumps(sanitized, ensure_ascii=False))
 
 
 if __name__ == "__main__":
