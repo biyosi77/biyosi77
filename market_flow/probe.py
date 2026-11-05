@@ -11,6 +11,7 @@ from datetime import date
 from pathlib import Path
 
 from valuation.api import MarketData
+from market_flow.collect import collect
 
 KRX_BASE = "https://data-dbg.krx.co.kr/svc/apis/"
 
@@ -109,6 +110,12 @@ def main():
             ("hts_kor_isnm", "futs_shrn_iscd", "optn_shrn_iscd", "futs_mtrt_cnt"), 20)
     except Exception as exc:
         result["errors"]["option_month_list"] = type(exc).__name__ + ": " + str(exc)[:120]
+    try:
+        partial = collect(day, market=market)
+        result["collector"] = {"markets": partial["markets"],
+                               "derivatives_ready": bool(partial["derivatives"])}
+    except Exception as exc:
+        result["errors"]["collector"] = type(exc).__name__ + ": " + str(exc)[:120]
     out = Path(os.environ.get("PROBE_OUTPUT", "market-flow-probe.json"))
     out.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
     # The selected market data and field names are public, while credentials are
