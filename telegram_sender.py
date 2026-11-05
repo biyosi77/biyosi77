@@ -1,7 +1,8 @@
 import sys
+import os
 import asyncio
 import logging
-from typing import List
+from typing import List, Optional
 from telegram import Bot
 from telegram.error import TelegramError
 from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, TELEGRAM_MAX_MESSAGE_LENGTH
@@ -13,25 +14,62 @@ if sys.platform == "win32":
     except Exception:
         pass
 
-
 logger = logging.getLogger(__name__)
+
+async def send_telegram_document_async(file_path: str, caption: str = "") -> bool:
+    """
+    생성된 PDF 리포트 파일을 텔레그램 채널로 전송합니다.
+    """
+    if not TELEGRAM_BOT_TOKEN or TELEGRAM_BOT_TOKEN == "your_telegram_bot_token_here":
+        logger.error("TELEGRAM_BOT_TOKEN이 설정되지 않았습니다.")
+        return False
+
+    if not TELEGRAM_CHAT_ID or TELEGRAM_CHAT_ID == "your_telegram_chat_id_here":
+        logger.error("TELEGRAM_CHAT_ID가 설정되지 않았습니다.")
+        return False
+
+    if not os.path.exists(file_path):
+        logger.error(f"전송할 파일이 존재하지 않습니다: {file_path}")
+        return False
+
+    try:
+        bot = Bot(token=TELEGRAM_BOT_TOKEN)
+        file_name = os.path.basename(file_path)
+        logger.info(f"텔레그램으로 PDF 문서 전송 시작: {file_name} (수신 Chat ID: {TELEGRAM_CHAT_ID})")
+
+        with open(file_path, "rb") as doc_file:
+            await bot.send_document(
+                chat_id=TELEGRAM_CHAT_ID,
+                document=doc_file,
+                filename=file_name,
+                caption=caption[:1024] if caption else None,
+                parse_mode="HTML" if caption else None
+            )
+
+        logger.info(f"✔ PDF 리포트 전송 성공: {file_name}")
+        return True
+    except Exception as e:
+        logger.error(f"텔레그램 문서 전송 중 오류 발생: {e}", exc_info=True)
+        return False
+
+def send_telegram_document(file_path: str, caption: str = "") -> bool:
+    """
+    동기 환경에서 send_telegram_document_async 호출 래퍼
+    """
+    return asyncio.run(send_telegram_document_async(file_path, caption=caption))
 
 def split_message(text: str, max_length: int = TELEGRAM_MAX_MESSAGE_LENGTH) -> List[str]:
     """
-    텔레그램 메시지 길이 제한(4,096자)을 고려하여 문단 또는 줄바꿈 단위로 
-    안전하게 메시지를 분할하는 함수입니다.
+    텔레그램 메시지 분할 함수 (텍스트 메시지용)
     """
     if len(text) <= max_length:
         return [text]
 
     chunks = []
     current_chunk = ""
-    
-    # 1단계: 문단(\n\n) 단위 분할
     paragraphs = text.split("\n\n")
 
     for paragraph in paragraphs:
-        # 단일 문단 자체가 max_length를 초과할 경우 줄바꿈(\n) 단위로 2차 분할
         if len(paragraph) > max_length:
             lines = paragraph.split("\n")
             for line in lines:
@@ -56,65 +94,31 @@ def split_message(text: str, max_length: int = TELEGRAM_MAX_MESSAGE_LENGTH) -> L
     return chunks
 
 async def send_telegram_report_async(text: str) -> bool:
-    """
-    python-telegram-bot 라이브러리를 사용하여 텔레그램으로 분할 메시지를 전송합니다.
-    """
-    if not TELEGRAM_BOT_TOKEN or TELEGRAM_BOT_TOKEN == "your_telegram_bot_token_here":
-        logger.error("TELEGRAM_BOT_TOKEN이 설정되지 않았습니다. .env 파일을 확인해 주세요.")
-        print("⚠️ [텔레그램 전송 취소] TELEGRAM_BOT_TOKEN이 없어서 콘솔에 리포트를 출력합니다:\n")
-        print(text)
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
         return False
-
-    if not TELEGRAM_CHAT_ID or TELEGRAM_CHAT_ID == "your_telegram_chat_id_here":
-        logger.error("TELEGRAM_CHAT_ID가 설정되지 않았습니다. .env 파일을 확인해 주세요.")
-        print("⚠️ [텔레그램 전송 취소] TELEGRAM_CHAT_ID가 없어서 콘솔에 리포트를 출력합니다:\n")
-        print(text)
-        return False
-
     try:
         bot = Bot(token=TELEGRAM_BOT_TOKEN)
         chunks = split_message(text)
-        logger.info(f"총 {len(chunks)}개의 분할 메시지를 텔레그램으로 전송합니다.")
-
         for idx, chunk in enumerate(chunks, 1):
             try:
-                # HTML 모드로 안전하게 전송 시도
                 await bot.send_message(
                     chat_id=TELEGRAM_CHAT_ID,
                     text=chunk,
                     parse_mode="HTML",
                     disable_web_page_preview=True
                 )
-            except TelegramError as te:
-                logger.warning(f"HTML 파싱 오류 발생 ({te}). 일반 텍스트 모드로 재전송합니다.")
-                # HTML 태그 오류 시 일반 텍스트로 안전 재전송
+            except TelegramError:
                 await bot.send_message(
                     chat_id=TELEGRAM_CHAT_ID,
                     text=chunk,
                     disable_web_page_preview=True
                 )
-            
-            # 메시지 연속 전송 간 1초 대기 (텔레그램 API rate limit 대응)
             if idx < len(chunks):
                 await asyncio.sleep(1)
-
-        logger.info("텔레그램 메시지 전송이 성공적으로 완료되었습니다.")
         return True
-
     except Exception as e:
-        logger.error(f"텔레그램 메시지 전송 중 오류 발생: {e}")
+        logger.error(f"메시지 전송 실패: {e}")
         return False
 
 def send_telegram_report(text: str) -> bool:
-    """
-    동기 환경에서 send_telegram_report_async 호출을 위한 래퍼 함수
-    """
     return asyncio.run(send_telegram_report_async(text))
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    sample_text = "테스트 메시지입니다. " * 300
-    split_result = split_message(sample_text, max_length=500)
-    print(f"Original length: {len(sample_text)}, Split count: {len(split_result)}")
-    for i, c in enumerate(split_result, 1):
-        print(f"--- Chunk {i} ({len(c)} chars) ---\n{c[:50]}...")

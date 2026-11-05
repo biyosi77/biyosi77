@@ -4,4 +4,5 @@ google-genai>=0.1.0
 schedule>=1.2.0
 python-dotenv>=1.0.0
 pytz>=2024.1
-
+youtube-transcript-api>=1.2.0
+reportlab>=5.0.0
