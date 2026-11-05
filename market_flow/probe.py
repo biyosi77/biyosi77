@@ -48,6 +48,17 @@ def main():
             result["krx"][label] = compact(rows, ("IDX_NM", "CLSPRC_IDX", "PROD_NM", "MKT_NM",
                                                    "ISU_NM", "TDD_CLSPRC", "CMPPREVDD_PRC",
                                                    "SPOT_PRC", "IMP_VOLT", "ACC_OPNINT_QTY"), 12)
+            if label in ("futures", "options"):
+                representatives = {}
+                for row in rows:
+                    key = (row.get("PROD_NM", ""), row.get("MKT_NM", "")
+                           if label == "futures" else
+                           "정규" if "(정규)" in row.get("ISU_NM", "") else "야간")
+                    if key not in representatives and row.get("TDD_CLSPRC"):
+                        representatives[key] = {field: row.get(field) for field in (
+                            "PROD_NM", "MKT_NM", "ISU_CD", "ISU_NM", "RGHT_TP_NM",
+                            "TDD_CLSPRC", "CMPPREVDD_PRC", "ACC_OPNINT_QTY", "IMP_VOLT")}
+                result["krx"][label]["representatives"] = list(representatives.values())
         except Exception as exc:
             result["errors"][label] = type(exc).__name__ + ": " + str(exc)[:120]
     ymd = day.strftime("%Y%m%d")
