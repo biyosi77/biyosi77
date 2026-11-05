@@ -95,6 +95,28 @@ def collect(day, now=None, market=None):
     return out
 
 
+def recent_history(directory, day, limit=4):
+    """Use earlier verified local snapshots as a short trend baseline."""
+    history = {}
+    for path in sorted(directory.glob("*.json")):
+        try:
+            item = json.loads(path.read_text(encoding="utf-8"))
+            item_day = date.fromisoformat(item["date"])
+            markets = item["markets"]
+            if item.get("demo") or item_day >= day or set(markets) != {"KOSPI", "KOSDAQ"}:
+                continue
+            summary = {"date": item_day.isoformat(), "markets": {}}
+            for name in ("KOSPI", "KOSDAQ"):
+                market = markets[name]
+                summary["markets"][name] = {key: market[key] for key in
+                    ("close", "prev_close", "foreign_net_bn", "program_arb_net_bn",
+                     "program_nonarb_net_bn")}
+            history[item_day] = summary
+        except (OSError, ValueError, KeyError, TypeError):
+            continue
+    return [history[key] for key in sorted(history)[-limit:]]
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--date", type=date.fromisoformat, required=True)
@@ -102,6 +124,7 @@ def main():
     args = parser.parse_args()
     result = collect(args.date)
     args.output.parent.mkdir(parents=True, exist_ok=True)
+    result["history"] = recent_history(args.output.parent, args.date)
     args.output.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
     print(args.output)
 
