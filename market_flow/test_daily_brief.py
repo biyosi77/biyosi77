@@ -7,7 +7,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from market_flow.daily_brief import checked_snapshot, main, market_comment
+from market_flow.daily_brief import checked_snapshot, main, market_analysis
 
 
 class ReviewOnlyTests(unittest.TestCase):
@@ -19,11 +19,17 @@ class ReviewOnlyTests(unittest.TestCase):
 
     def test_missing_future_flow_is_valid_for_review_and_limits_comment(self):
         checked_snapshot(self.data)
-        direction, watch, hypothesis = market_comment(
-            "KOSPI", self.data["markets"]["KOSPI"], self.data["derivatives"]["KOSPI200"])
-        self.assertIn("미확인", direction)
-        self.assertIn("보류", watch)
-        self.assertIn("판단할 수 없다", hypothesis)
+        kospi = market_analysis(self.data["markets"]["KOSPI"],
+                                self.data["derivatives"]["KOSPI200"])
+        kosdaq = market_analysis(self.data["markets"]["KOSDAQ"],
+                                 self.data["derivatives"]["KOSDAQ150"])
+        self.assertIn("상승했지만 외국인 현물은 순매도", kospi["headline"])
+        self.assertIn("-120.0", kospi["facts"])
+        self.assertIn("3,000.00 아래", kospi["confirm"])
+        self.assertIn("자료 없음", kospi["futures"])
+        self.assertIn("하락했지만 외국인 현물은 순매수", kosdaq["headline"])
+        self.assertIn("850.00 위", kosdaq["confirm"])
+        self.assertIn("판단 보류", kosdaq["limitation"])
 
     def test_missing_future_flow_blocks_send_before_pdf_creation(self):
         with tempfile.TemporaryDirectory(dir=Path(__file__).parent) as directory:
@@ -34,6 +40,13 @@ class ReviewOnlyTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "검토본은 발송할 수 없습니다"):
                     main()
             self.assertFalse((Path(directory) / "reports").exists())
+
+    def test_available_future_flow_is_compared_with_cash_flow(self):
+        self.data["derivatives"]["KOSPI200"]["foreign_future_net_contracts"] = -1500
+        analysis = market_analysis(self.data["markets"]["KOSPI"],
+                                   self.data["derivatives"]["KOSPI200"])
+        self.assertIn("같은 방향", analysis["futures"])
+        self.assertIn("보유 잔고·헤지 동기를 뜻하지 않음", analysis["limitation"])
 
 
 if __name__ == "__main__":
