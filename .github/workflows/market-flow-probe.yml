@@ -25,7 +25,7 @@ jobs:
         run: python -m unittest -v market_flow.test_collect
 
   probe:
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.ref == 'krx-flow-brief-4week-pilot'
     runs-on: ubuntu-latest
     timeout-minutes: 8
     env:
