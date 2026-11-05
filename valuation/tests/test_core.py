@@ -356,6 +356,7 @@ def test_close_delivery_uses_separate_key_and_blocks_retry(monkeypatch, tmp_path
     monkeypatch.setenv("SLOT", "close")
     monkeypatch.setenv("DRY_RUN", "false")
     monkeypatch.setenv("RESEND", "false")
+    monkeypatch.setenv("TEST_SEND", "false")
     args = ["--trade-date", "2026-10-29", "--output-dir", str(tmp_path)]
     assert run.main(args) == 0
     assert values["20261029_close"]["status"] == "sent"
@@ -592,6 +593,7 @@ def test_recovery_skips_sent_day_before_market_access(monkeypatch, tmp_path):
     monkeypatch.setenv("TRADE_DATE","")
     monkeypatch.setenv("DRY_RUN","false")
     monkeypatch.setenv("RESEND","false")
+    monkeypatch.setenv("TEST_SEND","false")
     assert run.main(["--output-dir",str(tmp_path)]) == 0
     assert json.loads((tmp_path/"run.json").read_text())["status"] == "duplicate_blocked"
 
