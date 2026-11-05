@@ -72,8 +72,9 @@ def main():
             result["errors"][label + "_program"] = type(exc).__name__ + ": " + str(exc)[:120]
     out = Path(os.environ.get("PROBE_OUTPUT", "market-flow-probe.json"))
     out.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(json.dumps({"date": result["date"], "completed": list(result["krx"]) + list(result["kis"]),
-                      "errors": result["errors"]}, ensure_ascii=False))
+    # The selected market data and field names are public, while credentials are
+    # never included in this result. Logs allow reviewing without artifact ZIP access.
+    print(json.dumps(result, ensure_ascii=False))
 
 
 if __name__ == "__main__":
