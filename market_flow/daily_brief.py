@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import os
 from datetime import date, datetime, time
 from html import escape
@@ -58,6 +59,22 @@ def checked_snapshot(data):
         for key in ("close", "prev_close", "foreign_net_bn", "institution_net_bn", "program_arb_net_bn", "program_nonarb_net_bn"):
             require(isinstance(market.get(key), (float, int)), f"{name}.{key} 누락")
         require(market["close"] > 0 and market["prev_close"] > 0, f"{name} 종가 오류")
+    history_dates = []
+    for item in data.get("history", []):
+        past = date.fromisoformat(item["date"])
+        require(past < trading_date and past.weekday() < 5, "이전 거래일 날짜 오류")
+        require(set(item["markets"]) == {"KOSPI", "KOSDAQ"}, "이전 시장 자료 오류")
+        for name in ("KOSPI", "KOSDAQ"):
+            market = item["markets"][name]
+            for key in ("close", "prev_close", "foreign_net_bn", "program_arb_net_bn",
+                        "program_nonarb_net_bn"):
+                value = market.get(key)
+                require(isinstance(value, (int, float)) and math.isfinite(value),
+                        f"이전 {name}.{key} 오류")
+            require(market["close"] > 0 and market["prev_close"] > 0, "이전 종가 오류")
+        history_dates.append(past)
+    require(len(history_dates) <= 4 and history_dates == sorted(set(history_dates)),
+            "이전 거래일은 중복 없이 오름차순 최대 4개가 필요합니다")
     require(set(data["derivatives"]) == {"KOSPI200", "KOSDAQ150"}, "두 파생 지수 자료가 모두 필요합니다")
     for name, deriv in data["derivatives"].items():
         expected_multiplier = 250000 if name == "KOSPI200" else 10000
@@ -93,7 +110,7 @@ def bn(value):
     return f"{value:+,.1f}" if value else "0.0"
 
 
-def market_analysis(m, d):
+def market_analysis(m, d, history=()):
     """Describe the observed disagreement and a falsifiable next-session test."""
     move = (m["close"] / m["prev_close"] - 1) * 100
     foreign = m["foreign_net_bn"]
@@ -104,6 +121,22 @@ def market_analysis(m, d):
     close = m["close"]
     facts = (f"지수 {move:+.2f}%, 외국인 {bn(foreign)}·기관 {bn(institution)} 십억원, "
              f"프로그램 순매수 {bn(program)} 십억원(차익 {bn(arb)}, 비차익 {bn(nonarb)})")
+    if history:
+        series = [*history, m]
+        foreign_total = sum(item["foreign_net_bn"] for item in series)
+        program_total = sum(item["program_arb_net_bn"] + item["program_nonarb_net_bn"]
+                            for item in series)
+        price_return = (m["close"] / history[0]["prev_close"] - 1) * 100
+        positive_days = sum(item["foreign_net_bn"] > 0 for item in series)
+        trend = (f"최근 {len(series)}거래일: 지수 {price_return:+.2f}%, "
+                 f"외국인 누적 {bn(foreign_total)} 십억원({positive_days}/{len(series)}일 순매수), "
+                 f"프로그램 누적 {bn(program_total)} 십억원")
+        if price_return > 0 and foreign_total < 0:
+            trend += "; 가격 상승과 외국인 매도의 누적 괴리"
+        elif price_return < 0 and foreign_total > 0:
+            trend += "; 가격 하락과 외국인 매수의 누적 괴리"
+    else:
+        trend = "이전 거래일 자료가 없어 당일 괴리의 지속성은 아직 판별할 수 없음"
     if move > 0 and foreign < 0:
         headline = "상승했지만 외국인 현물은 순매도: 상승의 수급 확인이 약함"
         counterparty = ("기관 순매수가 외국인 매도와 반대편에 있었지만"
@@ -151,7 +184,7 @@ def market_analysis(m, d):
     limitation = ("선물 투자자별 흐름이 없어 현물·파생 동행과 헤지 여부는 판단 보류"
                   if flow is None else
                   "선물 순매수는 당일 거래 흐름이며 보유 잔고·헤지 동기를 뜻하지 않음")
-    return {"headline": headline, "facts": facts, "futures": futures,
+    return {"headline": headline, "facts": facts, "trend": trend, "futures": futures,
             "hypothesis": hypothesis, "confirm": confirm, "reject": reject,
             "limitation": limitation}
 
@@ -183,7 +216,8 @@ def make_pdf(data, output):
     }
     P = lambda value, style="body": Paragraph(escape(str(value)), styles[style])
     incomplete = any(d["foreign_future_net_contracts"] is None for d in data["derivatives"].values())
-    analyses = {market: market_analysis(data["markets"][market], data["derivatives"][index])
+    analyses = {market: market_analysis(data["markets"][market], data["derivatives"][index],
+                                         [item["markets"][market] for item in data.get("history", [])])
                 for market, index in (("KOSPI", "KOSPI200"), ("KOSDAQ", "KOSDAQ150"))}
     story = [P("한국 증시 수급·옵션 데일리 브리프" + (" | 검토본" if incomplete else ""), "title"),
              P(f"{data['date']}  |  현물 15:30 · 파생 주간장 종가  |  자료 확인 {data['asof_kst'][:16]} KST", "tiny"),
@@ -209,6 +243,7 @@ def make_pdf(data, output):
         a = analyses[market]
         story += [P(f"{market} / {index}", "sub"),
                   P("관측: " + a["facts"] + ". " + a["futures"]),
+                  P("기간 맥락: " + a["trend"]),
                   P("가능한 설명: " + a["hypothesis"]),
                   P("가설 강화: " + a["confirm"]),
                   P("가설 약화: " + a["reject"]),
