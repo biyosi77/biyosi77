@@ -62,6 +62,11 @@ def build_expanded(old_file, output, day, quotes, previous_day, previous, consen
         raw.cell(row, 38).value = item["source"]
         raw.cell(row, 39).value = item["checked"]
         raw.cell(row, 40).value = item["reason"]
+        raw.cell(row, 41).value = " / ".join(years[y]["period"] for y in sorted(years))
+        old_net, old_op = original.cell(row, 4).value, original.cell(row, 5).value
+        new_net, new_op = years.get(2027, {}).get("net"), years.get(2027, {}).get("op")
+        raw.cell(row, 42).value = new_net / old_net - 1 if isinstance(old_net, (int, float)) and old_net and new_net is not None else "미확인"
+        raw.cell(row, 43).value = new_op / old_op - 1 if isinstance(old_op, (int, float)) and old_op and new_op is not None else "미확인"
         for year, col in ((2026, 45), (2027, 46), (2028, 47)):
             value = years.get(year, {}).get("roe")
             raw.cell(row, col).value = value if value is not None else "미확인"
