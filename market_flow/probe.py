@@ -49,13 +49,14 @@ def main():
         except Exception as exc:
             result["errors"][label] = type(exc).__name__ + ": " + str(exc)[:120]
     ymd = day.strftime("%Y%m%d")
-    for label, code in (("KOSPI", "KSP"), ("KOSDAQ", "KSQ")):
+    for label, code, index_code in (("KOSPI", "KSP", "0001"),
+                                    ("KOSDAQ", "KSQ", "1001")):
         try:
             payload = market.kis("/uapi/domestic-stock/v1/quotations/inquire-investor-daily-by-market",
                                  "FHPTJ04040000", {"FID_COND_MRKT_DIV_CODE": "U",
-                                 "FID_INPUT_ISCD": "0001", "FID_INPUT_DATE_1": ymd,
+                                 "FID_INPUT_ISCD": index_code, "FID_INPUT_DATE_1": ymd,
                                  "FID_INPUT_ISCD_1": code, "FID_INPUT_DATE_2": ymd,
-                                 "FID_INPUT_ISCD_2": "0001"})
+                                 "FID_INPUT_ISCD_2": index_code})
             result["kis"][label + "_investor"] = compact(payload.get("output", []),
                 ("stck_bsop_date", "bstp_nmix_prpr", "stck_prdy_clpr",
                  "frgn_ntby_tr_pbmn", "orgn_ntby_tr_pbmn"))
@@ -70,6 +71,21 @@ def main():
                 ("stck_bsop_date", "arbt_smtn_ntby_tr_pbmn", "nabt_smtn_ntby_tr_pbmn"))
         except Exception as exc:
             result["errors"][label + "_program"] = type(exc).__name__ + ": " + str(exc)[:120]
+    try:
+        payload = market.kis("/uapi/domestic-futureoption/v1/quotations/display-board-callput",
+                             "FHPIF05030100", {"FID_COND_MRKT_DIV_CODE": "O",
+                             "FID_COND_SCR_DIV_CODE": "20503", "FID_MRKT_CLS_CODE": "CO",
+                             "FID_MTRT_CNT": day.strftime("%Y%m"),
+                             "FID_MRKT_CLS_CODE1": "PO"})
+        for key in ("output1", "output2"):
+            rows = payload.get(key, [])
+            if isinstance(rows, dict):
+                rows = [rows]
+            result["kis"]["option_board_" + key] = compact(rows,
+                ("futs_shrn_iscd", "optn_shrn_iscd", "stck_prpr", "optn_prpr",
+                 "optn_delta", "optn_gama", "acml_vol", "hts_otst_stpl_qty"))
+    except Exception as exc:
+        result["errors"]["option_board"] = type(exc).__name__ + ": " + str(exc)[:120]
     out = Path(os.environ.get("PROBE_OUTPUT", "market-flow-probe.json"))
     out.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
     # The selected market data and field names are public, while credentials are
