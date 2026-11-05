@@ -12,8 +12,8 @@ if _raw_chat_id and _raw_chat_id.startswith("100") and not _raw_chat_id.startswi
 TELEGRAM_CHAT_ID = _raw_chat_id
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip().strip('"').strip("'")
 
-# Gemini 모델 설정 (기본: gemini-3.6-flash 또는 gemini-flash-latest)
-GEMINI_MODEL_NAME = "gemini-3.6-flash"
+# Gemini 모델 설정 (기본: gemini-3.8-flash 또는 gemini-flash-latest)
+GEMINI_MODEL_NAME = "gemini-3.8-flash"
 
 
 # 모니터링 대상 유튜브 채널 목록 (검증된 Channel ID)

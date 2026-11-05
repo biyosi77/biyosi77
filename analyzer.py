@@ -90,9 +90,9 @@ def generate_daily_investment_report(videos: List[Dict[str, Any]]) -> str:
                 contents=prompt
             )
         except Exception as model_err:
-            logger.warning(f"모델 {GEMINI_MODEL_NAME} 호출 실패 ({model_err}). fallback 모델(gemini-2.5-flash)로 시도합니다.")
+            logger.warning(f"모델 {GEMINI_MODEL_NAME} 호출 실패 ({model_err}). fallback 모델(gemini-flash-latest)로 시도합니다.")
             response = client.models.generate_content(
-                model="gemini-2.5-flash",
+                model="gemini-flash-latest",
                 contents=prompt
             )
 
