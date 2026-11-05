@@ -61,8 +61,10 @@ def checked_snapshot(data):
     require(set(data["derivatives"]) == {"KOSPI200", "KOSDAQ150"}, "두 파생 지수 자료가 모두 필요합니다")
     for name, deriv in data["derivatives"].items():
         expected_multiplier = 250000 if name == "KOSPI200" else 10000
-        for key in ("underlying_close", "future_close", "prev_future_close", "foreign_future_net_contracts", "future_multiplier_krw"):
+        for key in ("underlying_close", "future_close", "prev_future_close", "future_multiplier_krw"):
             require(isinstance(deriv.get(key), (float, int)), f"{name}.{key} 누락")
+        flow = deriv.get("foreign_future_net_contracts")
+        require(flow is None or isinstance(flow, (float, int)), f"{name}.foreign_future_net_contracts 오류")
         require(deriv["underlying_close"] > 0 and deriv["future_close"] > 0
                 and deriv["prev_future_close"] > 0, f"{name} 지수/선물 종가 오류")
         require(deriv["future_multiplier_krw"] == expected_multiplier,
@@ -95,6 +97,10 @@ def market_comment(name, m, d):
     move = (m["close"] / m["prev_close"] - 1) * 100
     program = m["program_arb_net_bn"] + m["program_nonarb_net_bn"]
     f = d["foreign_future_net_contracts"]
+    if f is None:
+        return ("현물·프로그램 흐름 관측, 외국인 선물 수급 미확인",
+                "변곡점 판단 보류: 선물 투자자별 수급을 확보한 뒤 현물·프로그램 흐름과 대조",
+                "가설: 현물과 프로그램 수급의 동행 여부는 확인할 수 있다. 외국인 선물 순매수와 거래 동기가 확인되지 않아 방향성·헤지 거래의 인과는 판단할 수 없다.")
     if move > 0 and m["foreign_net_bn"] < 0 and f < 0:
         direction = "가격 상승과 외국인 현물·선물 순매도가 엇갈림"
         watch = "고점 경계: 다음 거래일 현물 유입 회복과 선물 순매수 전환 여부 확인"
@@ -141,8 +147,10 @@ def make_pdf(data, output):
         "head": ParagraphStyle("head", fontName="MalgunBold", fontSize=8, leading=12, textColor=colors.white),
     }
     P = lambda value, style="body": Paragraph(escape(str(value)), styles[style])
-    story = [P("한국 증시 수급·옵션 데일리 브리프", "title"),
+    incomplete = any(d["foreign_future_net_contracts"] is None for d in data["derivatives"].values())
+    story = [P("한국 증시 수급·옵션 데일리 브리프" + (" | 검토본" if incomplete else ""), "title"),
              P(f"{data['date']}  |  현물 15:30 · 파생 주간장 종가  |  자료 확인 {data['asof_kst'][:16]} KST", "tiny"),
+             *([P("외국인 선물 순매수 자료 미확보 · 방향 해석 제한 · 텔레그램 발송 금지", "body")] if incomplete else []),
              P("오늘의 수급", "sub")]
     rows = [[P(x, "head") for x in ("시장", "종가 / 등락", "외국인 현물", "기관 현물", "프로그램 차익/비차익")]]
     for name in ("KOSPI", "KOSDAQ"):
@@ -161,10 +169,12 @@ def make_pdf(data, output):
         d, w, h = market_comment(market, data["markets"][market], data["derivatives"][index])
         f = data["derivatives"][index]
         future_move = (f["future_close"] / f["prev_future_close"] - 1) * 100
-        story += [P(f"{index}: 선물 {f['future_close']:,.2f} ({future_move:+.2f}%), 외국인 선물 당일 순매수 {f['foreign_future_net_contracts']:+,}계약"),
+        flow_text = (f"{f['foreign_future_net_contracts']:+,}계약" if f["foreign_future_net_contracts"] is not None
+                     else "미확인")
+        story += [P(f"{index}: 선물 {f['future_close']:,.2f} ({future_move:+.2f}%), 외국인 선물 당일 순매수 {flow_text}"),
                   P(f"관측 - {d}"), P(w)]
     story += [P("해석과 반증", "sub"),
-              P("현물 가격과 외국인 선물·프로그램 흐름의 동행/괴리를 변곡점 경계 신호로 사용한다. 단일 거래일만으로 고점·저점을 확정하지 않는다."),
+              P("현물 가격과 관측 가능한 수급 흐름의 동행/괴리를 검토한다. 외국인 선물 수급이 없으면 변곡점 경계 신호의 판단을 보류한다. 단일 거래일만으로 고점·저점을 확정하지 않는다."),
               P("반증 조건: 다음 거래일 가격과 수급이 반대로 재정렬되거나, 만기·롤오버·일회성 리밸런싱의 영향으로 확인될 경우 방향 해석을 수정한다."),
               P("당일 순매수는 거래 흐름이며 누적 보유 포지션을 의미하지 않는다.", "tiny"),
               PageBreak(),
@@ -191,6 +201,10 @@ def make_pdf(data, output):
             canvas.setFont("MalgunBold", 9)
             canvas.setFillColor(colors.HexColor("#A32929"))
             canvas.drawRightString(A4[0] - 42, A4[1] - 25, "가상 데이터 샘플 · 발송 금지")
+        elif incomplete:
+            canvas.setFont("MalgunBold", 9)
+            canvas.setFillColor(colors.HexColor("#A32929"))
+            canvas.drawRightString(A4[0] - 42, A4[1] - 25, "선물 수급 미확인 · 발송 금지")
         canvas.setFont("Malgun", 7)
         canvas.setFillColor(GRAY)
         canvas.drawString(42, 28, f"{data['date']}  ·  주간장 기준")
@@ -245,6 +259,9 @@ def main():
     data = json.loads(args.input.read_text(encoding="utf-8"))
     trading_date = checked_snapshot(data)
     require(not (args.send and data.get("demo")), "가상 데이터는 발송할 수 없습니다")
+    require(not (args.send and any(d["foreign_future_net_contracts"] is None
+                                   for d in data["derivatives"].values())),
+            "외국인 선물 순매수 누락: 검토본은 발송할 수 없습니다")
     args.output.mkdir(parents=True, exist_ok=True)
     pdf_path = args.output / f"KRX_flow_brief_{trading_date}.pdf"
     make_pdf(data, pdf_path)
