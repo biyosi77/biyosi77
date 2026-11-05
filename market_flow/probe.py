@@ -61,7 +61,7 @@ def main():
                             "TDD_CLSPRC", "CMPPREVDD_PRC", "ACC_OPNINT_QTY", "IMP_VOLT")}
                 result["krx"][label]["representatives"] = list(representatives.values())
         except Exception as exc:
-            result["errors"][label] = type(exc).__name__ + ": " + str(exc)[:120]
+            result["errors"][label] = type(exc).__name__
     ymd = day.strftime("%Y%m%d")
     for label, code, index_code in (("KOSPI", "KSP", "0001"),
                                     ("KOSDAQ", "KSQ", "1001")):
@@ -75,7 +75,7 @@ def main():
                 ("stck_bsop_date", "bstp_nmix_prpr", "stck_prdy_clpr",
                  "frgn_ntby_tr_pbmn", "orgn_ntby_tr_pbmn"))
         except Exception as exc:
-            result["errors"][label + "_investor"] = type(exc).__name__ + ": " + str(exc)[:120]
+            result["errors"][label + "_investor"] = type(exc).__name__
         try:
             payload = market.kis("/uapi/domestic-stock/v1/quotations/comp-program-trade-daily",
                                  "FHPPG04600001", {"FID_COND_MRKT_DIV_CODE": "J",
@@ -84,7 +84,7 @@ def main():
             result["kis"][label + "_program"] = compact(payload.get("output", []),
                 ("stck_bsop_date", "arbt_smtn_ntby_tr_pbmn", "nabt_smtn_ntby_tr_pbmn"))
         except Exception as exc:
-            result["errors"][label + "_program"] = type(exc).__name__ + ": " + str(exc)[:120]
+            result["errors"][label + "_program"] = type(exc).__name__
     try:
         payload = market.kis("/uapi/domestic-futureoption/v1/quotations/display-board-callput",
                              "FHPIF05030100", {"FID_COND_MRKT_DIV_CODE": "O",
@@ -100,7 +100,7 @@ def main():
                 ("optn_shrn_iscd", "nmix_sdpr", "optn_prpr", "delta_val",
                  "gama", "hts_ints_vltl", "acml_vol", "hts_otst_stpl_qty"), 8)
     except Exception as exc:
-        result["errors"]["option_board"] = type(exc).__name__ + ": " + str(exc)[:120]
+        result["errors"]["option_board"] = type(exc).__name__
     time.sleep(1.1)
     try:
         payload = market.kis("/uapi/domestic-futureoption/v1/quotations/display-board-futures",
@@ -111,7 +111,7 @@ def main():
             ("futs_shrn_iscd", "hts_kor_isnm", "futs_prpr", "futs_prdy_vrss",
              "hts_otst_stpl_qty", "acml_vol"), 20)
     except Exception as exc:
-        result["errors"]["futures_board"] = type(exc).__name__ + ": " + str(exc)[:120]
+        result["errors"]["futures_board"] = type(exc).__name__
     time.sleep(1.1)
     try:
         payload = market.kis("/uapi/domestic-futureoption/v1/quotations/display-board-option-list",
@@ -121,13 +121,13 @@ def main():
         result["kis"]["option_month_list"] = compact(payload.get("output", []),
             ("hts_kor_isnm", "futs_shrn_iscd", "optn_shrn_iscd", "futs_mtrt_cnt"), 20)
     except Exception as exc:
-        result["errors"]["option_month_list"] = type(exc).__name__ + ": " + str(exc)[:120]
+        result["errors"]["option_month_list"] = type(exc).__name__
     try:
         partial = collect(day, market=market)
         result["collector"] = {"markets": partial["markets"],
                                "derivatives_ready": bool(partial["derivatives"])}
     except Exception as exc:
-        result["errors"]["collector"] = type(exc).__name__ + ": " + str(exc)[:120]
+        result["errors"]["collector"] = type(exc).__name__
     try:
         derivatives = collect_derivatives(market, day)
         result["derivative_collector"] = {
@@ -139,7 +139,7 @@ def main():
                   "first_option": value["options"][0]}
             for key, value in derivatives.items()}
     except Exception as exc:
-        result["errors"]["derivative_collector"] = type(exc).__name__ + ": " + str(exc)[:120]
+        result["errors"]["derivative_collector"] = type(exc).__name__
     sanitized = {
         "date": result["date"],
         "krx": {name: {"available": True, "fields": value.get("fields", [])}
