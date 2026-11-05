@@ -21,11 +21,13 @@
 
 매일 `data/YYYY-MM-DD.json`을 `example_input.json` 형식으로 채운다. 각 출처의 `asof_kst`는 해당 거래일 주간장 종료 이후 실제 조회 시각으로 설정한다. 다음 날 재조회했으면 다음 날 시각을 그대로 기록한다. 옵션 그릭은 같은 기초지수·같은 장마감 스냅샷이어야 한다. JSON의 `demo`가 `true`면 PDF 시험 생성은 가능하나 텔레그램 발송은 금지된다.
 
-`collect.py`는 KRX 지수 종가와 KIS 투자자별 현물 순매수·프로그램 차익/비차익 순매수를 자동 수집한다. 거래일·자료 날짜를 확인하고 KRX/KIS 종가를 대조한다. `collect_derivatives.py`는 승인된 KRX API에서 정규 KOSPI200·KOSDAQ150 선물과 월물·위클리 옵션을 골라 한 거래일 입력에 합친다. 옵션 델타·감마는 KRX 종가·내재변동성으로 계산한 무배당·무이자 Black-Scholes **근사치**이며, 보유 주체별 순포지션이 아니다. 외국인 선물 순매수는 현재 API에 없으므로 `null`로 남긴다. PDF 생성기는 이 누락을 거부한다.
+`collect.py`는 KRX 지수 종가와 KIS 투자자별 현물 순매수·프로그램 차익/비차익 순매수를 자동 수집한다. 거래일·자료 날짜를 확인하고 KRX/KIS 종가를 대조한다. `collect_derivatives.py`는 승인된 KRX API에서 정규 KOSPI200·KOSDAQ150 선물과 월물·위클리 옵션을 골라 한 거래일 입력에 합친다. 옵션 델타·감마는 KRX 종가·내재변동성으로 계산한 무배당·무이자 Black-Scholes **근사치**이며, 보유 주체별 순포지션이 아니다. 외국인 선물 순매수는 현재 API에 없으므로 `null`로 남긴다. 이때 PDF는 **검토본**으로 생성되며 누락과 해석 제한을 명시한다. `--send`는 자료가 채워지기 전까지 실패한다.
 
 2026-11-05 추가 승인 후 기존 `KRX_API_KEY`로 `drv/fut_bydd_trd`, `drv/opt_bydd_trd` 호출에 성공했다. 2026-11-04 데이터에서 정규·야간 선물 종가 및 옵션 종가·내재변동성·미결제약정을 확인했다. 해당 Open API에는 투자자별 선물 순매수 필드가 없어 별도 자료 경로가 필요하다. 따라서 **자동 발송 예약 작업은 아직 활성화하지 않았다.**
 
 외국인 선물 거래 흐름의 표본 파일을 받으려면 [KRX 투자자별 거래실적](https://data.krx.co.kr/contents/MDC/MDI/mdiLoader/index.cmd?menuId=MDC0201050302)에 Data Marketplace 계정으로 로그인한다. 메뉴 경로는 `통계 → 기본 통계 → 파생상품 → 거래실적 → 투자자별 거래실적`이다. 로그아웃 상태에서 해당 메뉴를 누르거나 직접 주소를 열면 로그인 화면으로 이동한다. 로그인 후 KOSPI200 선물과 KOSDAQ150 선물의 **같은 거래일 정규장** 조회 결과를 CSV/엑셀로 한 번씩 내려받아 필드와 단위를 확인한다. 화면 파일은 표본 매핑용이며, 매일 자동화하려면 별도 이용 가능한 데이터 공급 경로가 필요하다.
+
+KRX Data Marketplace의 [선물 데이터 상품 목록](https://data.krx.co.kr/contents/MDC/DATA/datasale/index.cmd?prodType=FF&viewNm=dataProdList)에는 선물 **투자자별 거래실적**이 별도 항목으로 안내된다. 사용 권한, 제공 시간, 자동 수신 방식은 계약 조건을 확인해야 한다. 현재 KRX Open API 선물 일별매매정보 호출 승인만으로 이 데이터가 제공되는 것은 아니다.
 
 ## 실행
 
@@ -61,5 +63,6 @@ $python = 'C:\Users\PC\.cache\codex-runtimes\codex-primary-runtime\dependencies\
 - Telegram sendDocument: https://core.telegram.org/bots/api#senddocument
 - KRX Open API 이용약관: https://openapi.krx.co.kr/contents/OPP/INFO/OPPINFO002.jsp
 - KRX 투자자별 거래실적: https://data.krx.co.kr/contents/MDC/MDI/mdiLoader/index.cmd?menuId=MDC0201050302
+- KRX 선물 투자자별 거래실적 데이터 상품: https://data.krx.co.kr/contents/MDC/DATA/datasale/index.cmd?prodType=FF&viewNm=dataProdList
 - KIS Open API 서비스 소개: https://apiportal.koreainvestment.com/about-open-api
 
