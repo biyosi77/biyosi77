@@ -1,7 +1,7 @@
-"""Collect verified KOSPI/KOSDAQ cash and program flows for a trading day.
+"""Collect verified cash, program, futures, and options data for a trading day.
 
-The resulting JSON deliberately has no derivative data. The PDF generator will
-reject it until the derivative close and investor flow have been verified.
+Foreign futures investor flow remains null until a separate verified source is
+connected. The PDF generator rejects that incomplete input.
 """
 from __future__ import annotations
 
