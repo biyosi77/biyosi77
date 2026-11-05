@@ -45,11 +45,13 @@ def checked_snapshot(data):
     require(date(2026, 11, 5) <= trading_date <= date(2026, 12, 3), "4주 파일럿 기간 밖입니다")
     require(trading_date.weekday() < 5, "주말입니다")
     asof = datetime.fromisoformat(data["asof_kst"])
-    require(asof.date() == trading_date and asof.time() >= time(15, 45), "파생상품 주간장 종료 전 자료입니다")
+    require(asof.replace(tzinfo=None) >= datetime.combine(trading_date, time(15, 45)),
+            "파생상품 주간장 종료 전 자료입니다")
     require(len(data.get("sources", [])) >= 1, "출처가 없습니다")
     for source in data["sources"]:
         stamp = datetime.fromisoformat(source["asof_kst"])
-        require(stamp.date() == trading_date and stamp.time() >= time(15, 45), f"출처 시각 오류: {source['name']}")
+        require(stamp.replace(tzinfo=None) >= datetime.combine(trading_date, time(15, 45)),
+                f"출처 시각 오류: {source['name']}")
         require(source.get("url") or source.get("file"), f"출처 위치 누락: {source['name']}")
     require(set(data["markets"]) == {"KOSPI", "KOSDAQ"}, "KOSPI/KOSDAQ 현물 자료가 모두 필요합니다")
     for name, market in data["markets"].items():
@@ -131,7 +133,7 @@ def make_pdf(data, output):
     }
     P = lambda value, style="body": Paragraph(escape(str(value)), styles[style])
     story = [P("한국 증시 수급·옵션 데일리 브리프", "title"),
-             P(f"{data['date']}  |  현물 15:30 · 파생 주간장 종가  |  자료 확인 {data['asof_kst'][11:16]} KST", "tiny"),
+             P(f"{data['date']}  |  현물 15:30 · 파생 주간장 종가  |  자료 확인 {data['asof_kst'][:16]} KST", "tiny"),
              P("오늘의 수급", "sub")]
     rows = [[P(x, "head") for x in ("시장", "종가 / 등락", "외국인 현물", "기관 현물", "프로그램 차익/비차익")]]
     for name in ("KOSPI", "KOSDAQ"):
