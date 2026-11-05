@@ -84,8 +84,8 @@ def main():
             if isinstance(rows, dict):
                 rows = [rows]
             result["kis"]["option_board_" + key] = compact(rows,
-                ("futs_shrn_iscd", "optn_shrn_iscd", "stck_prpr", "optn_prpr",
-                 "optn_delta", "optn_gama", "acml_vol", "hts_otst_stpl_qty"))
+                ("optn_shrn_iscd", "nmix_sdpr", "optn_prpr", "delta_val",
+                 "gama", "hts_ints_vltl", "acml_vol", "hts_otst_stpl_qty"), 8)
     except Exception as exc:
         result["errors"]["option_board"] = type(exc).__name__ + ": " + str(exc)[:120]
     time.sleep(1.1)
@@ -95,9 +95,20 @@ def main():
                              "FID_COND_SCR_DIV_CODE": "20503",
                              "FID_COND_MRKT_CLS_CODE": "MKI"})
         result["kis"]["futures_board"] = compact(payload.get("output", []),
-            ("futs_shrn_iscd", "futs_prpr", "hts_otst_stpl_qty", "acml_vol"), 20)
+            ("futs_shrn_iscd", "hts_kor_isnm", "futs_prpr", "futs_prdy_vrss",
+             "hts_otst_stpl_qty", "acml_vol"), 20)
     except Exception as exc:
         result["errors"]["futures_board"] = type(exc).__name__ + ": " + str(exc)[:120]
+    time.sleep(1.1)
+    try:
+        payload = market.kis("/uapi/domestic-futureoption/v1/quotations/display-board-option-list",
+                             "FHPIO056104C0", {"FID_COND_SCR_DIV_CODE": "509",
+                             "FID_COND_MRKT_DIV_CODE": "",
+                             "FID_COND_MRKT_CLS_CODE": ""})
+        result["kis"]["option_month_list"] = compact(payload.get("output", []),
+            ("hts_kor_isnm", "futs_shrn_iscd", "optn_shrn_iscd", "futs_mtrt_cnt"), 20)
+    except Exception as exc:
+        result["errors"]["option_month_list"] = type(exc).__name__ + ": " + str(exc)[:120]
     out = Path(os.environ.get("PROBE_OUTPUT", "market-flow-probe.json"))
     out.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
     # The selected market data and field names are public, while credentials are
