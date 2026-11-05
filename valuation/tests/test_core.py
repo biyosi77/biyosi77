@@ -321,6 +321,12 @@ def test_delivery_claim_blocks_rerun_and_marks_after_success():
 
 def test_close_delivery_uses_separate_key_and_blocks_retry(monkeypatch, tmp_path):
     import valuation.run as run
+    from datetime import timedelta
+    monkeypatch.setattr(run, "prior_close", lambda market, rows, day:
+        (day - timedelta(days=1), market.collect_verified_close(rows, day - timedelta(days=1))))
+    monkeypatch.setattr(run, "fetch_consensus", lambda rows, day: {c: {"years": {}} for c in rows})
+    monkeypatch.setattr(run, "build_expanded", lambda template, out, day, quotes, previous_day, previous, consensus:
+        run.build(template, out, day, "close", quotes))
     values = {"20261029_": {"status": "sent", "telegram_message_id": 173}}
     sends = []
     market_calls = []
@@ -364,7 +370,7 @@ def test_close_delivery_uses_separate_key_and_blocks_retry(monkeypatch, tmp_path
         run.verify_close_file(output, rows, quotes, date(2026, 10, 29))
     assert run.main(args) == 0
     assert len(sends) == 1
-    assert len(market_calls) == 1
+    assert len(market_calls) == 2
     log = json.loads((tmp_path / "run.json").read_text())
     assert log["status"] == "duplicate_blocked"
     assert log["ledger_key"] == "20261029_close"

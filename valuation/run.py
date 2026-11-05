@@ -14,6 +14,8 @@ from openpyxl import load_workbook
 from .api import DataError, KRXCloseEmpty, KST, MarketData, Quote
 from .delivery import DeliveryError, DuplicateDelivery, Ledger, Telegram
 from .workbook import MAIN, RAW, build, records
+from .expanded import build_expanded, prior_close
+from .consensus import fetch_consensus
 
 TEMPLATE = Path(__file__).parent / "template" / "2027_valuation_20261020_133.xlsx"
 CLOSE_CRON = "0 7 * * 1-5"
@@ -198,7 +200,7 @@ def main(argv=None):
             verify_send_day(day, allow_historical=allow_historical)
         if not args.fixture_template_prices:
             enforce_time(day, args.slot, now)
-        key = f"{day:%Y%m%d}_{args.slot}"
+        key = f"{day:%Y%m%d}_{args.slot}" + ("_expanded_test" if args.test_send and not args.dry_run else "")
         log["ledger_key"] = key
         if not args.dry_run and not args.resend:
             ledger = Ledger()
@@ -241,8 +243,12 @@ def main(argv=None):
                                          "verified_stocks": sum(q.price is not None and q.shares is not None
                                                                 for q in quotes.values()), "passed": True}
         out = folder / f"valuation_{day:%Y%m%d}_{args.slot}.xlsx"
-        summary = build(TEMPLATE, out, day, args.slot, quotes,
-                        test=args.fixture_template_prices)
+        if args.fixture_template_prices:
+            summary = build(TEMPLATE, out, day, args.slot, quotes, test=True)
+        else:
+            previous_day, previous = prior_close(market, rows, day)
+            consensus = fetch_consensus(rows, day)
+            summary = build_expanded(TEMPLATE, out, day, quotes, previous_day, previous, consensus)
         log.update({"status": "validated", "file": out.name, **summary,
                     "checked_at": datetime.now(KST).isoformat(timespec="seconds")})
         write_log(folder, "run.json", log)
