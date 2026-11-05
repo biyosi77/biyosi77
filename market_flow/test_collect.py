@@ -4,6 +4,9 @@ from __future__ import annotations
 import sys
 import types
 import unittest
+import json
+import tempfile
+from pathlib import Path
 from unittest.mock import patch
 from datetime import date, datetime, timezone, timedelta
 
@@ -21,9 +24,9 @@ except ModuleNotFoundError:
     sys.modules["valuation.api"] = api
 
 try:
-    from market_flow.collect import collect
+    from market_flow.collect import collect, recent_history
 except ModuleNotFoundError:
-    from collect import collect
+    from collect import collect, recent_history
 
 KST = timezone(timedelta(hours=9))
 
@@ -85,6 +88,20 @@ class CollectTests(unittest.TestCase):
         with self.assertRaisesRegex(DataError, "has not ended"):
             collect(date(2026, 11, 5),
                     now=datetime(2026, 11, 5, 15, 44, tzinfo=KST), market=FakeMarket())
+
+    def test_history_uses_only_prior_real_snapshots(self):
+        with tempfile.TemporaryDirectory(dir=Path(__file__).parent) as directory:
+            folder = Path(directory)
+            base = {"markets": {name: {"close": 100, "prev_close": 99,
+                    "foreign_net_bn": 1, "program_arb_net_bn": 2,
+                    "program_nonarb_net_bn": 3} for name in ("KOSPI", "KOSDAQ")}}
+            for day in ("2026-10-29", "2026-10-30", "2026-11-02", "2026-11-03",
+                        "2026-11-04", "2026-11-05"):
+                item = {**base, "date": day, "demo": day == "2026-11-03"}
+                (folder / f"{day}.json").write_text(json.dumps(item), encoding="utf-8")
+            history = recent_history(folder, date(2026, 11, 5))
+            self.assertEqual([item["date"] for item in history],
+                             ["2026-10-29", "2026-10-30", "2026-11-02", "2026-11-04"])
 
 
 if __name__ == "__main__":
