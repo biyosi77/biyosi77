@@ -326,7 +326,7 @@ def test_close_delivery_uses_separate_key_and_blocks_retry(monkeypatch, tmp_path
         (day - timedelta(days=1), market.collect_verified_close(rows, day - timedelta(days=1))))
     monkeypatch.setattr(run, "fetch_consensus", lambda rows, day: {c: {"years": {}} for c in rows})
     monkeypatch.setattr(run, "build_expanded", lambda template, out, day, quotes, previous_day, previous, consensus:
-        run.build(template, out, day, "close", quotes))
+        run.build(run.TEMPLATE, out, day, "close", quotes))
     values = {"20261029_": {"status": "sent", "telegram_message_id": 173}}
     sends = []
     market_calls = []
