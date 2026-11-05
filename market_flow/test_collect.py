@@ -4,6 +4,7 @@ from __future__ import annotations
 import sys
 import types
 import unittest
+from unittest.mock import patch
 from datetime import date, datetime, timezone, timedelta
 
 try:
@@ -57,6 +58,13 @@ class FakeMarket:
 
 
 class CollectTests(unittest.TestCase):
+    def setUp(self):
+        self.patch_derivatives = patch.dict(collect.__globals__, {
+            "collect_derivatives": lambda market, day: {"KOSPI200": {"foreign_future_net_contracts": None}}
+        })
+        self.patch_derivatives.start()
+        self.addCleanup(self.patch_derivatives.stop)
+
     def test_verified_market_values_and_units(self):
         result = collect(date(2026, 11, 4),
                          now=datetime(2026, 11, 5, 14, 0, tzinfo=KST),
@@ -64,7 +72,7 @@ class CollectTests(unittest.TestCase):
         self.assertEqual(result["markets"]["KOSPI"]["foreign_net_bn"], -2452.827)
         self.assertEqual(result["markets"]["KOSDAQ"]["foreign_net_bn"], 9.895)
         self.assertEqual(result["markets"]["KOSDAQ"]["close"], 714.95)
-        self.assertFalse(result["derivatives"])
+        self.assertIsNone(result["derivatives"]["KOSPI200"]["foreign_future_net_contracts"])
 
     def test_mismatched_close_rejected(self):
         fake = FakeMarket()
