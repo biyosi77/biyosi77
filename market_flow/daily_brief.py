@@ -197,6 +197,9 @@ def send_telegram(pdf_path, trading_date, output_dir):
     token = os.environ.get("TELEGRAM_BOT_TOKEN")
     chat_id = os.environ.get("TELEGRAM_CHAT_ID")
     require(token and chat_id, "TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID 환경변수가 필요합니다")
+    require(os.environ.get("MARKET_FLOW_PRIVATE_RECIPIENT") == "1",
+            "본인만 접근하는 비공개 수신처 확인이 필요합니다")
+    require(not chat_id.startswith("@"), "공개 채널 주소로 발송할 수 없습니다")
     digest = hashlib.sha256(pdf_path.read_bytes()).hexdigest()
     receipt = output_dir / f"{trading_date}.telegram.json"
     if receipt.exists() and json.loads(receipt.read_text(encoding="utf-8")).get("sha256") == digest:
