@@ -25,6 +25,8 @@
 
 2026-11-05 추가 승인 후 기존 `KRX_API_KEY`로 `drv/fut_bydd_trd`, `drv/opt_bydd_trd` 호출에 성공했다. 2026-11-04 데이터에서 정규·야간 선물 종가 및 옵션 종가·내재변동성·미결제약정을 확인했다. 해당 Open API에는 투자자별 선물 순매수 필드가 없어 별도 자료 경로가 필요하다. 따라서 **자동 발송 예약 작업은 아직 활성화하지 않았다.**
 
+외국인 선물 거래 흐름의 표본 파일을 받으려면 [KRX 투자자별 거래실적](https://data.krx.co.kr/contents/MDC/MDI/mdiLoader/index.cmd?menuId=MDC0201050302)에 Data Marketplace 계정으로 로그인한다. 메뉴 경로는 `통계 → 기본 통계 → 파생상품 → 거래실적 → 투자자별 거래실적`이다. 로그아웃 상태에서 해당 메뉴를 누르거나 직접 주소를 열면 로그인 화면으로 이동한다. 로그인 후 KOSPI200 선물과 KOSDAQ150 선물의 **같은 거래일 정규장** 조회 결과를 CSV/엑셀로 한 번씩 내려받아 필드와 단위를 확인한다. 화면 파일은 표본 매핑용이며, 매일 자동화하려면 별도 이용 가능한 데이터 공급 경로가 필요하다.
+
 ## 실행
 
 ```powershell
@@ -43,7 +45,7 @@ $python = 'C:\Users\PC\.cache\codex-runtimes\codex-primary-runtime\dependencies\
 
 ## 연동 체크포인트
 
-- 정규 선물·월물/위클리 옵션의 실제 데이터 검증 완료. KIS와 KRX의 동시 실측 실행은 추가 확인
+- 정규 선물·월물/위클리 옵션 및 KIS/KRX 현물·프로그램의 2026-11-04 동시 실측 검증 완료
 - 외국인 선물 순매수의 자동 데이터 경로 확인
 - 데이터 공급처 및 계약/사용 범위 확인 (특히 텔레그램 채널 재배포)
 - 모든 필수 필드가 16:20 KST까지 제공되는지 실측
@@ -58,5 +60,6 @@ $python = 'C:\Users\PC\.cache\codex-runtimes\codex-primary-runtime\dependencies\
 - KRX 종가 데이터 제공시각: https://openapi.krx.co.kr/contents/OPP/DATA/OPPDATA002.jsp
 - Telegram sendDocument: https://core.telegram.org/bots/api#senddocument
 - KRX Open API 이용약관: https://openapi.krx.co.kr/contents/OPP/INFO/OPPINFO002.jsp
+- KRX 투자자별 거래실적: https://data.krx.co.kr/contents/MDC/MDI/mdiLoader/index.cmd?menuId=MDC0201050302
 - KIS Open API 서비스 소개: https://apiportal.koreainvestment.com/about-open-api
 
