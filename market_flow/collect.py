@@ -12,6 +12,10 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from valuation.api import DataError, MarketData
+try:
+    from market_flow.collect_derivatives import collect_derivatives
+except ModuleNotFoundError:
+    from collect_derivatives import collect_derivatives
 
 KST = ZoneInfo("Asia/Seoul")
 KRX_BASE = "https://data-dbg.krx.co.kr/svc/apis/"
@@ -87,6 +91,7 @@ def collect(day, now=None, market=None):
             "program_arb_net_bn": number(program_row, "arbt_smtn_ntby_tr_pbmn") / 1000,
             "program_nonarb_net_bn": number(program_row, "nabt_smtn_ntby_tr_pbmn") / 1000,
         }
+    out["derivatives"] = collect_derivatives(market, day)
     return out
 
 
