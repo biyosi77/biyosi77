@@ -19,14 +19,17 @@
 
 ## 입력
 
-매일 `data/YYYY-MM-DD.json`을 `example_input.json` 형식으로 채운다. 각 출처의 `asof_kst`는 해당 거래일 주간장 종료 이후로 설정한다. 옵션 그릭은 같은 기초지수·같은 장마감 스냅샷이어야 한다. JSON의 `demo`가 `true`면 PDF 시험 생성은 가능하나 텔레그램 발송은 금지된다.
+매일 `data/YYYY-MM-DD.json`을 `example_input.json` 형식으로 채운다. 각 출처의 `asof_kst`는 해당 거래일 주간장 종료 이후 실제 조회 시각으로 설정한다. 다음 날 재조회했으면 다음 날 시각을 그대로 기록한다. 옵션 그릭은 같은 기초지수·같은 장마감 스냅샷이어야 한다. JSON의 `demo`가 `true`면 PDF 시험 생성은 가능하나 텔레그램 발송은 금지된다.
 
-필수 데이터 자동 수집은 공급처별 API/CSV 형식이 확인되면 별도 어댑터를 붙인다. 현재 KRX 공개 Open API에는 지수·선물·옵션 일별 시세가 있으나, 투자자별 파생 수급과 프로그램매매 등 전체 요구 항목의 자동 취득 경로는 별도로 확정해야 한다.
+`collect.py`는 KRX 지수 종가와 KIS 투자자별 현물 순매수·프로그램 차익/비차익 순매수를 자동 수집한다. 거래일·자료 날짜를 확인하고 KRX/KIS 종가를 대조한다. 결과 JSON에는 `derivatives: {}`가 남으며 PDF 생성기는 이를 거부한다. 두 파생 지수에 대한 검증된 주간장 종가, 외국인 선물 순매수, 옵션 행사가·미결제약정·그릭·승수가 채워진 후에만 보고서를 발송한다.
+
+2026-11-05 연결 시험 결과, 현재 `KRX_API_KEY`는 KRX 지수 API에 접근하지만 `drv/fut_bydd_trd`, `drv/opt_bydd_trd`에서는 HTTP 401을 받는다. 사용자가 두 서비스 이용 권한을 신청하기로 했다. KIS 옵션 전광판은 조회 당시 델타·감마·미결제약정을 반환하지만, 전일 종가 스냅샷이나 외국인 선물 순매수의 검증된 대체 경로는 아직 확인되지 않았다. 따라서 **자동 발송 예약 작업은 아직 활성화하지 않았다.**
 
 ## 실행
 
 ```powershell
 $python = 'C:\Users\PC\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe'
+& $python .\collect.py --date 2026-11-05 --output .\data\2026-11-05.json
 & $python .\daily_brief.py --input .\data\2026-11-05.json --output .\reports
 ```
 
@@ -36,6 +39,8 @@ $python = 'C:\Users\PC\.cache\codex-runtimes\codex-primary-runtime\dependencies\
 
 ## 연동 체크포인트
 
+- KRX 선물·옵션 두 API 권한 활성화 및 데이터 필드 확인
+- 외국인 선물 순매수와 KOSDAQ150 옵션 그릭·행사가의 자동 데이터 경로 확인
 - 데이터 공급처 및 계약/사용 범위 확인 (특히 텔레그램 채널 재배포)
 - 모든 필수 필드가 16:20 KST까지 제공되는지 실측
 - 봇 토큰/채널 ID를 환경변수에 저장하고 시험 채널에서 1회 발송 검증
