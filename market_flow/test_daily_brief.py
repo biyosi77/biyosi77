@@ -31,6 +31,14 @@ class ReviewOnlyTests(unittest.TestCase):
         self.assertIn("850.00 위", kosdaq["confirm"])
         self.assertIn("판단 보류", kosdaq["limitation"])
 
+    def test_five_session_context_distinguishes_repeated_divergence(self):
+        history = [item["markets"]["KOSPI"] for item in self.data["history"]]
+        analysis = market_analysis(self.data["markets"]["KOSPI"],
+                                   self.data["derivatives"]["KOSPI200"], history)
+        self.assertIn("최근 5거래일", analysis["trend"])
+        self.assertIn("-280.0", analysis["trend"])
+        self.assertIn("누적 괴리", analysis["trend"])
+
     def test_missing_future_flow_blocks_send_before_pdf_creation(self):
         with tempfile.TemporaryDirectory(dir=Path(__file__).parent) as directory:
             snapshot = Path(directory) / "snapshot.json"
