@@ -16,12 +16,14 @@ NAMESPACES = {
 
 import time
 
-def fetch_channel_videos(channel_info: Dict[str, str], hours: int = 24) -> List[Dict[str, Any]]:
+def fetch_channel_videos(channel_info: Dict[str, Any], hours: int = 24) -> List[Dict[str, Any]]:
     """
     단일 유튜브 채널의 RSS 피드를 수집하여 지정된 시간(기본 24시간) 이내 업로드된 영상을 반환합니다.
+    channel_info에 'keywords' 리스트가 지정된 경우 제목 또는 설명에 해당 키워드가 포함된 영상만 선별합니다.
     """
     channel_name = channel_info["name"]
     rss_url = channel_info["rss_url"]
+    keywords = channel_info.get("keywords", [])
     recent_videos = []
 
     user_agents = [
@@ -77,6 +79,12 @@ def fetch_channel_videos(channel_info: Dict[str, str], hours: int = 24) -> List[
                 media_desc = media_group.find('media:description', NAMESPACES)
                 if media_desc is not None and media_desc.text:
                     description = media_desc.text.strip()
+
+            # 키워드 필터링 (지정된 채널에 한해 제목 또는 설명에 키워드 포함 여부 확인)
+            if keywords:
+                combined_text = f"{title} {description}"
+                if not any(kw in combined_text for kw in keywords):
+                    continue
 
             # 시간 파싱 및 24시간 이내 필터링
             if published_str:

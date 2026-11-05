@@ -49,7 +49,7 @@ def run_daily_investment_report_job(hours: int = 24, max_retries: int = 3):
     for attempt in range(1, max_retries + 1):
         try:
             # 1. 유튜브 신규 영상 수집 (기본 24시간, 수집 0건 시 자동 48~72시간 확장)
-            logger.info(f"1단계: 유튜브 4대 채널 신규 영상 수집 중... (시도 {attempt}/{max_retries})")
+            logger.info(f"1단계: 유튜브 5대 채널 신규 영상 수집 중... (시도 {attempt}/{max_retries})")
             videos = collect_all_recent_videos(hours=hours)
             
             # 2. Gemini AI 투자 리포트 분석 및 생성
@@ -91,8 +91,8 @@ def main():
             sys.exit(1)
         return
 
-    # 매일 오전 07:00 스케줄 등록
-    target_time = "07:00"
+    # 매일 오전 08:30 스케줄 등록 (매경 월가월부 '문지웅의 빅머니' 오전 8시 업로드 반영)
+    target_time = "08:30"
     schedule.every().day.at(target_time).do(run_daily_investment_report_job, hours=24)
     now_kst = get_kst_now().strftime('%Y-%m-%d %H:%M:%S')
     logger.info(f"⏰ 스케줄러가 등록되었습니다 (현재 KST 시각: {now_kst})")

@@ -2,8 +2,8 @@ name: Daily Investment Report Automation
 
 on:
   schedule:
-    # 매일 한국시간(KST) 오전 06:50 실행 (UTC 21:50 전날) - 깃허브 서버 정각 대기열 우회
-    - cron: '50 21 * * *'
+    # 매일 한국시간(KST) 오전 08:30 실행 (UTC 23:30 전날) - 오전 8시 '문지웅의 빅머니' 업로드 이후 수집
+    - cron: '30 23 * * *'
   workflow_dispatch:
 
 

@@ -37,6 +37,12 @@ TARGET_CHANNELS = [
         "name": "와이스트릿",
         "channel_id": "UCupslRq5jW95UGzPjOZz0FA",
         "rss_url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCupslRq5jW95UGzPjOZz0FA"
+    },
+    {
+        "name": "매경 월가월부",
+        "channel_id": "UCIipmgxpUxDmPP-ma3Ahvbw",
+        "rss_url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCIipmgxpUxDmPP-ma3Ahvbw",
+        "keywords": ["빅머니", "문지웅"]
     }
 ]
 
