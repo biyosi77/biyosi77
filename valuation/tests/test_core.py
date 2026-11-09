@@ -406,9 +406,9 @@ def test_verified_close_is_two_bulk_requests_and_checks_response_date():
 def test_kis_regular_close_uses_exact_1530_bar_and_separate_shares():
     client = MarketData.__new__(MarketData)
     calls = []
-    def minute(code, day, cutoff):
+    def minute(code, day, cutoff, *, include_volume=False):
         calls.append(('minute', code, day, cutoff))
-        return ('153000', 225000)
+        return ('153000', 225000, 1234567)
     def shares(code):
         calls.append(('shares', code))
         return 5846278608
@@ -420,7 +420,7 @@ def test_kis_regular_close_uses_exact_1530_bar_and_separate_shares():
     assert calls == [('minute', '005930', date(2026, 10, 30), '153000'),
                      ('shares', '005930')]
     calls.clear()
-    client.minute = lambda *args: ('152900', 220500)
+    client.minute = lambda *args, **kwargs: ('152900', 220500, 1000000)
     stale = client.kis_regular_close_snapshot('005930', date(2026, 10, 30))
     assert stale.price is None and '15:30' in stale.reason and calls == []
 
@@ -627,3 +627,14 @@ def test_manual_run_never_waits(monkeypatch):
     monkeypatch.setenv("GITHUB_EVENT_NAME","workflow_dispatch")
     monkeypatch.setattr(run.time,"sleep",lambda _: pytest.fail("manual run must not wait"))
     run.wait_for_close()
+
+
+def test_regular_minute_volume_is_from_same_krx_1530_bar():
+    from valuation.api import choose_minute
+    day = date(2026, 11, 9)
+    rows = [
+        {"stck_bsop_date":"20261109","stck_cntg_hour":"153000","stck_prpr":"12000","acml_vol":"1,234,567"},
+        {"stck_bsop_date":"20261109","stck_cntg_hour":"153100","stck_prpr":"12100","acml_vol":"1,300,000"},
+        {"stck_bsop_date":"20261106","stck_cntg_hour":"153000","stck_prpr":"11000","acml_vol":"900,000"},
+    ]
+    assert choose_minute(rows,day,"153000",include_volume=True) == ("153000",12000,1234567)

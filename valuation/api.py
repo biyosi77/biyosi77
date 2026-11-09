@@ -32,6 +32,7 @@ class Quote:
     checked_at: str
     reason: str = ""
     trade_date: str = ""
+    volume: int | None = None
 
 
 def positive_int(value):
@@ -50,7 +51,7 @@ def credential(name):
     return value
 
 
-def choose_minute(rows: list[dict], day: date, cutoff: str = "113000"):
+def choose_minute(rows: list[dict], day: date, cutoff: str = "113000", *, include_volume=False):
     """Use the requested KRX minute close, else the latest regular minute before it."""
     chosen = None
     for row in rows:
@@ -61,7 +62,7 @@ def choose_minute(rows: list[dict], day: date, cutoff: str = "113000"):
             continue
         price = positive_int(row.get("stck_prpr"))
         if price is not None and (chosen is None or stamp > chosen[0]):
-            chosen = (stamp, price)
+            chosen = (stamp, price, positive_int(row.get("acml_vol"))) if include_volume else (stamp, price)
     return chosen
 
 
@@ -195,12 +196,12 @@ class MarketData:
                 if str(row.get("BAS_DD", "")).replace("-", "") != day.strftime("%Y%m%d"):
                     continue
                 result[code] = (positive_int(row.get("TDD_CLSPRC")),
-                                positive_int(row.get("LIST_SHRS")), endpoint)
+                                positive_int(row.get("LIST_SHRS")), endpoint, positive_int(row.get("ACC_TRDVOL")))
         if not result:
             raise KRXCloseEmpty("KRX confirmed close dataset empty or not yet published")
         return result
 
-    def minute(self, code, day, cutoff="113000"):
+    def minute(self, code, day, cutoff="113000", *, include_volume=False):
         if cutoff in ("150000", "153000") and day == datetime.now(KST).date():
             # KIS's dedicated same-day endpoint is the live intraday source.
             payload = self.kis("/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice",
@@ -213,7 +214,7 @@ class MarketData:
                                "FID_INPUT_ISCD": code, "FID_INPUT_HOUR_1": cutoff,
                                "FID_INPUT_DATE_1": day.strftime("%Y%m%d"),
                                "FID_PW_DATA_INCU_YN": "N", "FID_FAKE_TICK_INCU_YN": ""})
-        return choose_minute(payload.get("output2", []), day, cutoff)
+        return choose_minute(payload.get("output2", []), day, cutoff, include_volume=include_volume)
 
     def current_shares(self, code):
         payload = self.kis("/uapi/domestic-stock/v1/quotations/inquire-price",
@@ -223,7 +224,7 @@ class MarketData:
 
     def kis_regular_close_snapshot(self, code, day):
         """Exact 15:30 KRX(J) bar plus listed shares; never use daily last price."""
-        bar = self.minute(code, day, "153000")
+        bar = self.minute(code, day, "153000", include_volume=True)
         if bar is None or bar[0] != "153000":
             reason = (f"15:30 KRX 정규장 분봉 미확인 (마지막 {bar[0][:2]}:{bar[0][2:4]})"
                       if bar else "15:30 KRX 정규장 분봉 미확인")
@@ -233,7 +234,7 @@ class MarketData:
         shares = self.current_shares(code)
         return Quote(bar[1], shares, "KIS KRX(J) 15:30 분봉; KIS 상장주식수",
                      "15:30 KST 정규장 종가", datetime.now(KST).isoformat(timespec="seconds"),
-                     "" if shares else "상장주식 수 미확인", day.isoformat())
+                     "" if shares else "상장주식 수 미확인", day.isoformat(), bar[2])
 
     def collect_same_day_close(self, codes, day, *, now=None):
         """Poll one sentinel until published, then collect each stock once."""
@@ -286,7 +287,7 @@ class MarketData:
         checked = datetime.now(KST).isoformat(timespec="seconds")
         return {code: Quote(daily[code][0], daily[code][1],
                             "KRX " + daily[code][2], "15:30 KST 정규장 종가",
-                            checked, trade_date=day.isoformat()) for code in codes}
+                            checked, trade_date=day.isoformat(), volume=daily[code][3]) for code in codes}
 
     def collect(self, codes, day, slot):
         if slot not in ("1130", "1500"):

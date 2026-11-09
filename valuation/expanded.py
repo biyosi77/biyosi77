@@ -1,10 +1,11 @@
 """Refresh the approved 2026–28 grouped layout from verified market and annual sources."""
 from copy import copy
+import re
 from datetime import timedelta
 from pathlib import Path
 
 from openpyxl import load_workbook
-from openpyxl.utils import get_column_letter
+from openpyxl.utils import get_column_letter, column_index_from_string
 from openpyxl.worksheet.table import TableColumn
 
 from .api import DataError
@@ -155,6 +156,44 @@ def build_expanded(old_file, output, day, quotes, previous_day, previous, consen
                 for col,v in ((5,prev.get("period")),(6,cur.get("period")),(7,prev.get("basis")),(8,cur.get("basis")),(9,prev.get(key)),(10,cur.get(key)),(11,value),(12,value),(13,"미확인" if value=="미확인" else "재계산 일치"),(14,"연간 이익으로 독립 재계산"),(15,consensus[code]["source"])):
                     audit.cell(index,col).value=v if v is not None else "미확인"
                 index+=1
+    # Add the KRX regular-session volume beside the stock code. Shift only
+    # references to main-sheet cells; references to 원자료 retain their columns.
+    main.insert_cols(4)
+    for row in range(FIRST, last + 1):
+        code = ordered[row - FIRST]
+        raw_row = codes[code]
+        volume = quotes[code].volume
+        raw.cell(raw_row, 54).value = volume if volume is not None else "미확인"
+        main.cell(row, 4)._style = copy(main.cell(row, 5)._style)
+        main.cell(row, 4).number_format = '#,##0'
+        main.cell(row, 4).value = f'=IF(ISNUMBER(원자료!BB{raw_row}),원자료!BB{raw_row},"미확인")'
+        for col in range(5, 30):
+            cell = main.cell(row, col)
+            if cell.data_type == "f":
+                cell.value = re.sub(
+                    r'(?<![!A-Za-z0-9_])([A-Z]{1,3})(\d+)\b',
+                    lambda match: f'{get_column_letter(column_index_from_string(match[1]) + 1)}{match[2]}',
+                    cell.value)
+    raw["BB9"] = "당일 KRX 정규장 거래량"
+    raw.column_dimensions["BB"].width = 23
+    raw.tables["SourceTable"].ref = f"A9:BB{last}"
+    if raw.tables["SourceTable"].autoFilter is not None:
+        raw.tables["SourceTable"].autoFilter.ref = raw.tables["SourceTable"].ref
+    raw.tables["SourceTable"].tableColumns.append(TableColumn(id=54, name=raw["BB9"].value))
+    main["D9"]._style = copy(main["E9"]._style)
+    main["D9"] = "거래량"
+    main.column_dimensions["D"].width = 17
+    main.tables["ValuationTable"].ref = f"A9:AC{last}"
+    if main.tables["ValuationTable"].autoFilter is not None:
+        main.tables["ValuationTable"].autoFilter.ref = main.tables["ValuationTable"].ref
+    main.tables["ValuationTable"].tableColumns.insert(3, TableColumn(id=4, name="거래량"))
+    for col, table_col in enumerate(main.tables["ValuationTable"].tableColumns, 1):
+        table_col.id = col
+        table_col.name = str(main.cell(9, col).value)
+    cache = {f"{get_column_letter(column_index_from_string(re.match(r'[A-Z]+', address).group()) + 1)}{re.search(r'\d+$', address).group()}": value
+             for address, value in cache.items()}
+    for row, code in enumerate(ordered, FIRST):
+        cache[f"D{row}"] = quotes[code].volume if quotes[code].volume is not None else "미확인"
     audit["A2"]=f"133종목 · 798항목 | {day.isoformat()} 기준"
     from openpyxl.workbook.properties import CalcProperties
     book.calculation = CalcProperties(fullCalcOnLoad=True)
@@ -164,7 +203,8 @@ def build_expanded(old_file, output, day, quotes, previous_day, previous, consen
     _set_cached_values(output,cache)
     check=load_workbook(output,data_only=True)
     assert len({str(check[MAIN].cell(r,3).value) for r in range(FIRST,last+1)})==133
-    assert all(check[MAIN].cell(r,4).value == quotes[str(check[MAIN].cell(r,3).value)].price for r in range(FIRST,last+1))
+    assert all(check[MAIN].cell(r,5).value == quotes[str(check[MAIN].cell(r,3).value)].price for r in range(FIRST,last+1))
+    assert all(check[MAIN].cell(r,4).value == (quotes[str(check[MAIN].cell(r,3).value)].volume or "미확인") for r in range(FIRST,last+1))
     return {"total_stocks":133,"successful_prices":sum(q.price is not None and q.shares is not None for q in quotes.values()),
         "missing":[c for c in ordered if quotes[c].price is None or quotes[c].shares is None],
         "uncomputed_per":[c for c in ordered if per[c] is None],
