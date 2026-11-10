@@ -13,12 +13,8 @@ for code in ("005930", "033160", "420770"):
     observations = {}
     result["stocks"][code] = observations
     requests = (
-        ("minute", "inquire-time-itemchartprice", "FHKST03010200", {
-            "FID_INPUT_HOUR_1": "153000", "FID_PW_DATA_INCU_YN": "Y", "FID_ETC_CLS_CODE": ""}),
-        ("trades", "inquire-time-itemconclusion", "FHPST01060000", {"FID_INPUT_HOUR_1": "153000"}),
-        ("daily", "inquire-daily-itemchartprice", "FHKST03010100", {
-            "FID_INPUT_DATE_1": day.strftime("%Y%m%d"), "FID_INPUT_DATE_2": day.strftime("%Y%m%d"),
-            "FID_PERIOD_DIV_CODE": "D", "FID_ORG_ADJ_PRC": "1"}),
+        ("trades_153001", "inquire-time-itemconclusion", "FHPST01060000", {"FID_INPUT_HOUR_1": "153001"}),
+        ("trades_153100", "inquire-time-itemconclusion", "FHPST01060000", {"FID_INPUT_HOUR_1": "153100"}),
     )
     for label, endpoint, tr_id, params in requests:
         time.sleep(0.4)
@@ -32,11 +28,6 @@ for code in ("005930", "033160", "420770"):
             }
         except DataError as exc:
             observations[label] = {"error": str(exc)}
-try:
-    daily = market.closes(day)
-    result["krx"] = {code: daily.get(code) for code in result["stocks"]}
-except DataError as exc:
-    result["krx"] = {"error": str(exc)}
 folder = Path("valuation-output")
 folder.mkdir(exist_ok=True)
 (folder / "volume-probe.json").write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
