@@ -33,6 +33,11 @@ class Quote:
     reason: str = ""
     trade_date: str = ""
     volume: int | None = None
+    volume_source: str = ""
+    volume_basis: str = ""
+    volume_checked_at: str = ""
+    volume_reason: str = ""
+    volume_evidence: str = ""
 
 
 def positive_int(value):
@@ -51,7 +56,12 @@ def credential(name):
     return value
 
 
-def choose_minute(rows: list[dict], day: date, cutoff: str = "113000", *, include_volume=False):
+def nonnegative_int(value):
+    text = str(value).replace(",", "")
+    return int(text) if text.isdigit() else None
+
+
+def choose_minute(rows: list[dict], day: date, cutoff: str = "113000", *, include_execution_volume=False):
     """Use the requested KRX minute close, else the latest regular minute before it."""
     chosen = None
     for row in rows:
@@ -62,11 +72,47 @@ def choose_minute(rows: list[dict], day: date, cutoff: str = "113000", *, includ
             continue
         price = positive_int(row.get("stck_prpr"))
         if price is not None and (chosen is None or stamp > chosen[0]):
-            # The KIS minute rows contain cntg_vol (one-minute executions),
-            # not the whole day's acml_vol.  Never label a minute's volume as
-            # the regular-session total.
-            chosen = (stamp, price, None) if include_volume else (stamp, price)
+            # Per-minute executions are only a reconciliation input, not
+            # the cumulative daily volume displayed in the workbook.
+            chosen = ((stamp, price, nonnegative_int(row.get("cntg_vol")))
+                      if include_execution_volume else (stamp, price))
     return chosen
+
+
+def reconcile_closing_volume(rows, day, close_price, auction_volume):
+    """Reconcile timestamped cumulative volume to the dated closing minute."""
+    if auction_volume is None:
+        raise DataError("15:30 분봉 체결량 미확인: 누적 거래량 대사 불가")
+    valid = []
+    for row in rows:
+        stamp = str(row.get("stck_cntg_hour", ""))
+        business_day = str(row.get("stck_bsop_date") or day.strftime("%Y%m%d"))
+        if business_day != day.strftime("%Y%m%d"):
+            raise DataError("거래량 체결일 불일치")
+        if not (len(stamp) == 6 and stamp.isdigit() and "090000" <= stamp < "153100"):
+            continue
+        volume = nonnegative_int(row.get("acml_vol"))
+        price = positive_int(row.get("stck_prpr"))
+        if volume is None or price is None:
+            raise DataError("정규장 체결 가격 또는 누적 거래량 미확인")
+        valid.append((stamp, volume, price))
+    before = [row for row in valid if row[0] < "153000"]
+    closing = [row for row in valid if row[0] >= "153000"]
+    if not before:
+        raise DataError("종가 직전 누적 거래량 미확인: 분봉 대사 불가")
+    prior = max(before)
+    final = max(closing) if closing else prior
+    if final[2] != close_price:
+        raise DataError("거래량 체결 가격과 15:30 종가 불일치")
+    if auction_volume > 0 and not closing:
+        raise DataError("종가 동시호가 체결 미확인")
+    if any(row[2] != close_price for row in closing):
+        raise DataError("종가 동시호가 체결 가격 불일치")
+    if final[1] - prior[1] != auction_volume:
+        raise DataError("종가 누적 거래량 증분과 15:30 분봉 체결량 불일치")
+    evidence = (f"직전 {prior[0]} 누적 {prior[1]} + "
+                f"15:30 분봉 체결량 {auction_volume} = 마감 누적 {final[1]}")
+    return final[1], f"{day.isoformat()} {final[0][:2]}:{final[0][2:4]}:{final[0][4:]} KST 종가 체결", evidence
 
 
 class MarketData:
@@ -204,7 +250,7 @@ class MarketData:
             raise KRXCloseEmpty("KRX confirmed close dataset empty or not yet published")
         return result
 
-    def minute(self, code, day, cutoff="113000", *, include_volume=False):
+    def minute(self, code, day, cutoff="113000", *, include_execution_volume=False):
         if cutoff in ("150000", "153000") and day == datetime.now(KST).date():
             # KIS's dedicated same-day endpoint is the live intraday source.
             payload = self.kis("/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice",
@@ -217,17 +263,20 @@ class MarketData:
                                "FID_INPUT_ISCD": code, "FID_INPUT_HOUR_1": cutoff,
                                "FID_INPUT_DATE_1": day.strftime("%Y%m%d"),
                                "FID_PW_DATA_INCU_YN": "N", "FID_FAKE_TICK_INCU_YN": ""})
-        chosen = choose_minute(payload.get("output2", []), day, cutoff,
-                               include_volume=include_volume)
-        if chosen and include_volume and cutoff == "153000" and day == datetime.now(KST).date():
-            summary = payload.get("output1") or {}
-            # output1 is the cumulative KRX(J) volume.  Require its current
-            # price to agree with the exact-date 15:30 bar; a later session's
-            # snapshot must not be silently attached to that close.
-            if (chosen[0] == "153000" and
-                    positive_int(summary.get("stck_prpr")) == chosen[1]):
-                return chosen[:2] + (positive_int(summary.get("acml_vol")),)
-        return chosen
+        return choose_minute(payload.get("output2", []), day, cutoff,
+                             include_execution_volume=include_execution_volume)
+
+    def closing_volume(self, code, day, price, auction_volume):
+        # This endpoint has no date input. Only pair it with today's dated
+        # 15:30 minute, and check again after the request to exclude rollover.
+        if day != datetime.now(KST).date():
+            raise DataError("거래량 당일 체결 API의 날짜 불일치")
+        payload = self.kis("/uapi/domestic-stock/v1/quotations/inquire-time-itemconclusion",
+                           "FHPST01060000", {"FID_COND_MRKT_DIV_CODE": "J",
+                           "FID_INPUT_ISCD": code, "FID_INPUT_HOUR_1": "153100"})
+        if day != datetime.now(KST).date():
+            raise DataError("거래량 조회 중 거래일 변경")
+        return reconcile_closing_volume(payload.get("output2", []), day, price, auction_volume)
 
     def current_shares(self, code):
         payload = self.kis("/uapi/domestic-stock/v1/quotations/inquire-price",
@@ -237,7 +286,7 @@ class MarketData:
 
     def kis_regular_close_snapshot(self, code, day):
         """Exact 15:30 KRX(J) bar plus listed shares; never use daily last price."""
-        bar = self.minute(code, day, "153000", include_volume=True)
+        bar = self.minute(code, day, "153000", include_execution_volume=True)
         if bar is None or bar[0] != "153000":
             reason = (f"15:30 KRX 정규장 분봉 미확인 (마지막 {bar[0][:2]}:{bar[0][2:4]})"
                       if bar else "15:30 KRX 정규장 분봉 미확인")
@@ -245,9 +294,18 @@ class MarketData:
                          datetime.now(KST).isoformat(timespec="seconds"), reason,
                          day.isoformat())
         shares = self.current_shares(code)
+        volume, basis, evidence, volume_reason = None, "", "", ""
+        try:
+            volume, basis, evidence = self.closing_volume(code, day, bar[1], bar[2])
+        except DataError as exc:
+            if any(term in str(exc) for term in ("rate limited", "EGW00201", "HTTP 401", "HTTP 403", "token")):
+                raise
+            volume_reason = str(exc)
         return Quote(bar[1], shares, "KIS KRX(J) 15:30 분봉; KIS 상장주식수",
                      "15:30 KST 정규장 종가", datetime.now(KST).isoformat(timespec="seconds"),
-                     "" if shares else "상장주식 수 미확인", day.isoformat(), bar[2])
+                     "" if shares else "상장주식 수 미확인", day.isoformat(), volume,
+                     "KIS KRX(J) inquire-time-itemconclusion output2.acml_vol",
+                     basis, datetime.now(KST).isoformat(timespec="seconds"), volume_reason, evidence)
 
     def collect_same_day_close(self, codes, day, *, now=None):
         """Poll one sentinel until published, then collect each stock once."""
@@ -288,18 +346,8 @@ class MarketData:
                         raise
         if not any(q.price is not None and q.shares is not None for q in quotes.values()):
             raise DataError("KIS same-day KRX close collection failed for all stocks")
-        # KRX's market-wide daily dataset is the definitive source for the
-        # regular-session total when it has been published.  Two requests
-        # cover the whole universe; require the same date and close price.
-        try:
-            daily = self.closes(day)
-        except DataError:
-            daily = {}
-        for code, quote in list(quotes.items()):
-            row = daily.get(code)
-            if row and row[0] == quote.price and row[3] is not None:
-                from dataclasses import replace
-                quotes[code] = replace(quote, volume=row[3])
+        # Daily totals and output1 are not timestamped at the closing auction.
+        # Never overwrite a time-verified volume with a later cumulative total.
         return quotes
 
     def collect_verified_close(self, codes, day):
@@ -312,7 +360,8 @@ class MarketData:
         checked = datetime.now(KST).isoformat(timespec="seconds")
         return {code: Quote(daily[code][0], daily[code][1],
                             "KRX " + daily[code][2], "15:30 KST 정규장 종가",
-                            checked, trade_date=day.isoformat(), volume=daily[code][3]) for code in codes}
+                            checked, trade_date=day.isoformat(),
+                            volume_reason="과거 일별 거래량은 15:30 누적과 분리 검증 불가") for code in codes}
 
     def collect(self, codes, day, slot):
         if slot not in ("1130", "1500"):

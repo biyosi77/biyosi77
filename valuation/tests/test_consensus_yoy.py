@@ -43,7 +43,9 @@ def test_all_yoy_formula_references_follow_stock_code_after_per_sort(tmp_path):
         original = load_workbook(source, read_only=True, data_only=True)
         codes = [row[1] for row in original.worksheets[1].iter_rows(min_row=FIRST, values_only=True)]
         original.close()
-    quotes = {code: Quote(1000 + i, 1000000, "test", "test", "test", volume=100)
+    quotes = {code: Quote(1000 + i, 1000000, "test", "test", "test", volume=i,
+                          volume_source=f"KIS {code}", volume_basis=f"basis {code}",
+                          volume_checked_at="checked", volume_evidence=f"evidence {code}")
               for i, code in enumerate(codes)}
     consensus = {}
     for i, code in enumerate(codes):
@@ -67,6 +69,14 @@ def test_all_yoy_formula_references_follow_stock_code_after_per_sort(tmp_path):
     main_values, raw, audit_values = values.worksheets
     assert main["C10"].value != codes[0]
     rows = {main.cell(row, 3).value: row for row in range(FIRST, main.max_row + 1)}
+    for code, row in rows.items():
+        raw_row = codes.index(code) + FIRST
+        assert main_values.cell(row, 4).value == quotes[code].volume
+        assert raw.cell(raw_row, 54).value == quotes[code].volume
+        assert raw.cell(raw_row, 61).value == f"KIS {code}"
+        assert raw.cell(raw_row, 65).value == f"evidence {code}"
+    assert raw.tables["SourceTable"].ref == "A9:BM142"
+    assert len(raw.tables["SourceTable"].tableColumns) == 65
     for cells in audit.iter_rows(min_row=7, values_only=False):
         code, key, year = cells[0].value, cells[2].value, int(cells[3].value[:4])
         offset = year - 2026

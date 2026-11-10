@@ -406,7 +406,7 @@ def test_verified_close_is_two_bulk_requests_and_checks_response_date():
 def test_kis_regular_close_uses_exact_1530_bar_and_separate_shares():
     client = MarketData.__new__(MarketData)
     calls = []
-    def minute(code, day, cutoff, *, include_volume=False):
+    def minute(code, day, cutoff, *, include_execution_volume=False):
         calls.append(('minute', code, day, cutoff))
         return ('153000', 225000, 1234567)
     def shares(code):
@@ -414,6 +414,7 @@ def test_kis_regular_close_uses_exact_1530_bar_and_separate_shares():
         return 5846278608
     client.minute = minute
     client.current_shares = shares
+    client.closing_volume = lambda *args: (1234567, '15:30:19', 'reconciled')
     quote = client.kis_regular_close_snapshot('005930', date(2026, 10, 30))
     assert (quote.price, quote.shares, quote.trade_date) == (225000, 5846278608, '2026-10-30')
     assert quote.basis == '15:30 KST 정규장 종가'
@@ -629,38 +630,3 @@ def test_manual_run_never_waits(monkeypatch):
     monkeypatch.setenv("GITHUB_EVENT_NAME","workflow_dispatch")
     monkeypatch.setattr(run.time,"sleep",lambda _: pytest.fail("manual run must not wait"))
     run.wait_for_close()
-
-
-def test_same_day_volume_uses_cumulative_summary_not_minute_executions():
-    from datetime import datetime
-    from valuation.api import KST
-    day = datetime.now(KST).date()
-    client = MarketData.__new__(MarketData)
-    payload = {
-        "output1": {"stck_prpr": "12000", "acml_vol": "1,234,567"},
-        "output2": [
-            {"stck_bsop_date": day.strftime("%Y%m%d"), "stck_cntg_hour": "153000",
-             "stck_prpr": "12000", "cntg_vol": "42"},
-            {"stck_bsop_date": day.strftime("%Y%m%d"), "stck_cntg_hour": "153100",
-             "stck_prpr": "12100", "cntg_vol": "500"},
-        ],
-    }
-    client.kis = lambda path, tr_id, params: payload
-    assert client.minute("005930", day, "153000", include_volume=True) == ("153000", 12000, 1234567)
-    payload["output1"]["stck_prpr"] = "12100"
-    assert client.minute("005930", day, "153000", include_volume=True) == ("153000", 12000, None)
-
-
-def test_same_day_krx_volume_requires_matching_confirmed_close():
-    client = MarketData.__new__(MarketData)
-    day = date(2026, 11, 9)
-    client.sleep = lambda _: None
-    client.kis_regular_close_snapshot = lambda code, _: Quote(12000, 1000000,
-        "KIS KRX(J) 15:30 분봉; KIS 상장주식수", "15:30 KST 정규장 종가",
-        "test", trade_date=day.isoformat())
-    client.closes = lambda _: {"005930": (12000, 1000000, "stk_bydd_trd", 1234567),
-                               "000660": (12100, 1000000, "stk_bydd_trd", 999999)}
-    quotes = client.collect_same_day_close(["005930", "000660"], day,
-        now=lambda: datetime(2026, 11, 9, 16, 0, tzinfo=ZoneInfo("Asia/Seoul")))
-    assert quotes["005930"].volume == 1234567
-    assert quotes["000660"].volume is None

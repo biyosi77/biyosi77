@@ -240,6 +240,13 @@ def build_expanded(old_file, output, day, quotes, previous_day, previous, consen
         raw_row = codes[code]
         volume = quotes[code].volume
         raw.cell(raw_row, 54).value = volume if volume is not None else "미확인"
+        quote = quotes[code]
+        for col, value in enumerate((
+            quote.volume_source, quote.volume_basis, quote.volume_checked_at,
+            quote.volume_reason or ("거래량 검증 정보 없음" if volume is None else ""),
+            quote.volume_evidence,
+        ), 61):
+            raw.cell(raw_row, col).value = value
         main.cell(row, 4)._style = copy(main.cell(row, 5)._style)
         main.cell(row, 4).number_format = '#,##0'
         main.cell(row, 4).value = f'=IF(ISNUMBER(원자료!BB{raw_row}),원자료!BB{raw_row},"미확인")'
@@ -252,7 +259,7 @@ def build_expanded(old_file, output, day, quotes, previous_day, previous, consen
                     cell.value)
     raw["BB9"] = "당일 KRX 정규장 거래량"
     raw.column_dimensions["BB"].width = 23
-    raw.tables["SourceTable"].ref = f"A9:BH{last}"
+    raw.tables["SourceTable"].ref = f"A9:BM{last}"
     if raw.tables["SourceTable"].autoFilter is not None:
         raw.tables["SourceTable"].autoFilter.ref = raw.tables["SourceTable"].ref
     raw.tables["SourceTable"].tableColumns.append(TableColumn(id=54, name=raw["BB9"].value))
@@ -263,6 +270,14 @@ def build_expanded(old_file, output, day, quotes, previous_day, previous, consen
             raw.cell(9, col).value = header
             raw.column_dimensions[get_column_letter(col)].width = 32
             raw.tables["SourceTable"].tableColumns.append(TableColumn(id=col, name=header))
+    for col, header in enumerate(("거래량 출처", "거래량 기준시각", "거래량 조회시각 (KST)",
+                                  "거래량 예외 사유", "거래량 분봉 대사 근거"), 61):
+        raw.cell(9, col)._style = copy(raw["BB9"]._style)
+        raw.cell(9, col).value = header
+        raw.column_dimensions[get_column_letter(col)].width = 35
+        raw.tables["SourceTable"].tableColumns.append(TableColumn(id=col, name=header))
+        for row in range(FIRST, last + 1):
+            raw.cell(row, col)._style = copy(raw.cell(row, 53)._style)
     main["D9"]._style = copy(main["E9"]._style)
     main["D9"] = "거래량"
     main.column_dimensions["D"].width = 17
@@ -287,12 +302,27 @@ def build_expanded(old_file, output, day, quotes, previous_day, previous, consen
     check=load_workbook(output,data_only=True)
     assert len({str(check[MAIN].cell(r,3).value) for r in range(FIRST,last+1)})==133
     assert all(check[MAIN].cell(r,5).value == quotes[str(check[MAIN].cell(r,3).value)].price for r in range(FIRST,last+1))
-    assert all(check[MAIN].cell(r,4).value == (quotes[str(check[MAIN].cell(r,3).value)].volume or "미확인") for r in range(FIRST,last+1))
+    for row in range(FIRST, last + 1):
+        code = str(check[MAIN].cell(row, 3).value)
+        q = quotes[code]
+        if check[MAIN].cell(row, 4).value != (q.volume if q.volume is not None else "미확인"):
+            raise DataError("saved volume does not match the stock code")
+        rr = codes[code]
+        for col, expected in ((61, q.volume_source), (62, q.volume_basis),
+                              (63, q.volume_checked_at), (65, q.volume_evidence)):
+            if (check[RAW].cell(rr, col).value or "") != expected:
+                raise DataError("saved volume provenance mismatch")
     if any(not same_yoy(check[audit.title][address].value, value) for address, value in audit_cache.items()):
         raise DataError("saved YoY audit values could not be verified")
     return {"total_stocks":133,"successful_prices":sum(q.price is not None and q.shares is not None for q in quotes.values()),
         "missing":[c for c in ordered if quotes[c].price is None or quotes[c].shares is None],
         "missing_volume":[c for c in ordered if quotes[c].volume is None],
+        "volume_verification": {
+            "verified_stocks": sum(q.volume is not None for q in quotes.values()),
+            "missing_reasons": {c: quotes[c].volume_reason or "거래량 검증 정보 없음"
+                                for c in ordered if quotes[c].volume is None},
+            "sources": sorted({q.volume_source for q in quotes.values() if q.volume_source}),
+        },
         "uncomputed_per":[c for c in ordered if per[c] is None],
         "uncomputed_por":[c for c in ordered if metric(caps[c],consensus[c]["years"].get(2027,{}).get("op")) is None]}
 
