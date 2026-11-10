@@ -62,7 +62,10 @@ def choose_minute(rows: list[dict], day: date, cutoff: str = "113000", *, includ
             continue
         price = positive_int(row.get("stck_prpr"))
         if price is not None and (chosen is None or stamp > chosen[0]):
-            chosen = (stamp, price, positive_int(row.get("acml_vol"))) if include_volume else (stamp, price)
+            # The KIS minute rows contain cntg_vol (one-minute executions),
+            # not the whole day's acml_vol.  Never label a minute's volume as
+            # the regular-session total.
+            chosen = (stamp, price, None) if include_volume else (stamp, price)
     return chosen
 
 
@@ -214,7 +217,17 @@ class MarketData:
                                "FID_INPUT_ISCD": code, "FID_INPUT_HOUR_1": cutoff,
                                "FID_INPUT_DATE_1": day.strftime("%Y%m%d"),
                                "FID_PW_DATA_INCU_YN": "N", "FID_FAKE_TICK_INCU_YN": ""})
-        return choose_minute(payload.get("output2", []), day, cutoff, include_volume=include_volume)
+        chosen = choose_minute(payload.get("output2", []), day, cutoff,
+                               include_volume=include_volume)
+        if chosen and include_volume and cutoff == "153000" and day == datetime.now(KST).date():
+            summary = payload.get("output1") or {}
+            # output1 is the cumulative KRX(J) volume.  Require its current
+            # price to agree with the exact-date 15:30 bar; a later session's
+            # snapshot must not be silently attached to that close.
+            if (chosen[0] == "153000" and
+                    positive_int(summary.get("stck_prpr")) == chosen[1]):
+                return chosen[:2] + (positive_int(summary.get("acml_vol")),)
+        return chosen
 
     def current_shares(self, code):
         payload = self.kis("/uapi/domestic-stock/v1/quotations/inquire-price",
@@ -275,6 +288,18 @@ class MarketData:
                         raise
         if not any(q.price is not None and q.shares is not None for q in quotes.values()):
             raise DataError("KIS same-day KRX close collection failed for all stocks")
+        # KRX's market-wide daily dataset is the definitive source for the
+        # regular-session total when it has been published.  Two requests
+        # cover the whole universe; require the same date and close price.
+        try:
+            daily = self.closes(day)
+        except DataError:
+            daily = {}
+        for code, quote in list(quotes.items()):
+            row = daily.get(code)
+            if row and row[0] == quote.price and row[3] is not None:
+                from dataclasses import replace
+                quotes[code] = replace(quote, volume=row[3])
         return quotes
 
     def collect_verified_close(self, codes, day):

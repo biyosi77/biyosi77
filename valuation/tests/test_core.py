@@ -427,6 +427,7 @@ def test_kis_regular_close_uses_exact_1530_bar_and_separate_shares():
 
 def test_same_day_collection_polls_one_sentinel_then_fetches_each_code_once():
     client = MarketData.__new__(MarketData)
+    client.closes = lambda _: {}
     calls = []
     sleeps = []
     def snapshot(code, day):
@@ -447,6 +448,7 @@ def test_same_day_collection_polls_one_sentinel_then_fetches_each_code_once():
 def test_same_day_partial_missing_is_marked_without_stale_substitution(tmp_path):
     from valuation.run import verify_close_file, verify_close_quotes
     client = MarketData.__new__(MarketData)
+    client.closes = lambda _: {}
     client.sleep = lambda _: None
     def snapshot(code, day):
         price = 100 if code == '005930' else None
@@ -629,12 +631,36 @@ def test_manual_run_never_waits(monkeypatch):
     run.wait_for_close()
 
 
-def test_regular_minute_volume_is_from_same_krx_1530_bar():
-    from valuation.api import choose_minute
+def test_same_day_volume_uses_cumulative_summary_not_minute_executions():
+    from datetime import datetime
+    from valuation.api import KST
+    day = datetime.now(KST).date()
+    client = MarketData.__new__(MarketData)
+    payload = {
+        "output1": {"stck_prpr": "12000", "acml_vol": "1,234,567"},
+        "output2": [
+            {"stck_bsop_date": day.strftime("%Y%m%d"), "stck_cntg_hour": "153000",
+             "stck_prpr": "12000", "cntg_vol": "42"},
+            {"stck_bsop_date": day.strftime("%Y%m%d"), "stck_cntg_hour": "153100",
+             "stck_prpr": "12100", "cntg_vol": "500"},
+        ],
+    }
+    client.kis = lambda path, tr_id, params: payload
+    assert client.minute("005930", day, "153000", include_volume=True) == ("153000", 12000, 1234567)
+    payload["output1"]["stck_prpr"] = "12100"
+    assert client.minute("005930", day, "153000", include_volume=True) == ("153000", 12000, None)
+
+
+def test_same_day_krx_volume_requires_matching_confirmed_close():
+    client = MarketData.__new__(MarketData)
     day = date(2026, 11, 9)
-    rows = [
-        {"stck_bsop_date":"20261109","stck_cntg_hour":"153000","stck_prpr":"12000","acml_vol":"1,234,567"},
-        {"stck_bsop_date":"20261109","stck_cntg_hour":"153100","stck_prpr":"12100","acml_vol":"1,300,000"},
-        {"stck_bsop_date":"20261106","stck_cntg_hour":"153000","stck_prpr":"11000","acml_vol":"900,000"},
-    ]
-    assert choose_minute(rows,day,"153000",include_volume=True) == ("153000",12000,1234567)
+    client.sleep = lambda _: None
+    client.kis_regular_close_snapshot = lambda code, _: Quote(12000, 1000000,
+        "KIS KRX(J) 15:30 분봉; KIS 상장주식수", "15:30 KST 정규장 종가",
+        "test", trade_date=day.isoformat())
+    client.closes = lambda _: {"005930": (12000, 1000000, "stk_bydd_trd", 1234567),
+                               "000660": (12100, 1000000, "stk_bydd_trd", 999999)}
+    quotes = client.collect_same_day_close(["005930", "000660"], day,
+        now=lambda: datetime(2026, 11, 9, 16, 0, tzinfo=ZoneInfo("Asia/Seoul")))
+    assert quotes["005930"].volume == 1234567
+    assert quotes["000660"].volume is None

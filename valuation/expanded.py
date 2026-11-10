@@ -207,6 +207,7 @@ def build_expanded(old_file, output, day, quotes, previous_day, previous, consen
     assert all(check[MAIN].cell(r,4).value == (quotes[str(check[MAIN].cell(r,3).value)].volume or "미확인") for r in range(FIRST,last+1))
     return {"total_stocks":133,"successful_prices":sum(q.price is not None and q.shares is not None for q in quotes.values()),
         "missing":[c for c in ordered if quotes[c].price is None or quotes[c].shares is None],
+        "missing_volume":[c for c in ordered if quotes[c].volume is None],
         "uncomputed_per":[c for c in ordered if per[c] is None],
         "uncomputed_por":[c for c in ordered if metric(caps[c],consensus[c]["years"].get(2027,{}).get("op")) is None]}
 

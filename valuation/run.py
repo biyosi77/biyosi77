@@ -111,7 +111,8 @@ def caption(day, slot, summary, test=False, delayed=False):
             f"가격 기준: {'11:30 KST 또는 그 이전 KRX 정규장 마지막 분봉(개별 실제시각은 원자료)' if slot == '1130' else '15:00 KST 또는 그 이전 KRX 정규장 마지막 분봉(개별 실제시각은 원자료)' if slot == '1500' else '15:30 KST KRX 정규장 종가'}\n"
             f"가격·주식수 확인: {summary['successful_prices']}/{summary['total_stocks']}종목\n"
             f"26~28E 확장 밸류에이션 · 27E PER/POR 미산출: {len(summary['uncomputed_per'])}/{len(summary['uncomputed_por'])}종목\n"
-            f"{'부분 누락 있음 — ' if missing else ''}가격·주식수 미확인: {suffix}")
+            f"{'부분 누락 있음 — ' if missing else ''}가격·주식수 미확인: {suffix}\n"
+            f"정규장 거래량 미확인: {len(summary.get('missing_volume', []))}종목")
 
 
 def write_log(folder, name, data):
