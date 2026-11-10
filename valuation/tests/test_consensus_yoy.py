@@ -13,6 +13,7 @@ from valuation.workbook import FIRST
 def test_fnguide_uses_the_annual_table_and_keeps_total_net_separate():
     data = {
         "header": [
+            {"YYMM": None, "EP_CHK": None, "CD": "VAL1"},
             {"YYMM": "2025/12", "EP_CHK": " ", "CD": "VAL3"},
             {"YYMM": "2026/12", "EP_CHK": "E", "CD": "VAL4"},
         ],

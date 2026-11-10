@@ -34,11 +34,11 @@ def _rate(value):
 def _periods(dataset):
     periods = {}
     for column in dataset["header"]:
-        match = re.fullmatch(r"(202[5-8])/(0[1-9]|1[0-2])", column["YYMM"])
+        match = re.fullmatch(r"(202[5-8])/(0[1-9]|1[0-2])", column.get("YYMM") or "")
         if not match:
             continue
         year, month = int(match[1]), match[2]
-        status = column["EP_CHK"].strip()
+        status = (column.get("EP_CHK") or "").strip()
         if status not in (("", "A") if year == 2025 else ("E",)):
             continue
         if year in periods:
