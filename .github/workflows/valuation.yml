@@ -75,7 +75,7 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         run: python -m pytest valuation/tests -q
       - name: Build, validate, and optionally send
-        run: python -m valuation.run
+        run: python -m valuation.volume_probe
       - name: Preserve report and sanitized log
         if: always()
         uses: actions/upload-artifact@v4
