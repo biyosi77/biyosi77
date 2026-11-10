@@ -75,22 +75,26 @@ def _restore(cell, snapshot):
     cell.value, cell._style, cell.comment, cell._hyperlink = snapshot
 
 
-def _set_cached_values(path, cache):
+def _set_cached_values(path, cache, *, audit_cache=None):
     """Populate OOXML formula caches so viewers also see verified results without Excel."""
     path = Path(path)
+    sheets = {"xl/worksheets/sheet1.xml": cache}
+    if audit_cache is not None:
+        sheets["xl/worksheets/sheet3.xml"] = audit_cache
     with NamedTemporaryFile(dir=path.parent, suffix=".xlsx", delete=False) as tmp:
         temp = Path(tmp.name)
     try:
         with ZipFile(path) as source, ZipFile(temp, "w") as target:
             for info in source.infolist():
                 content = source.read(info.filename)
-                if info.filename == "xl/worksheets/sheet1.xml":
+                if info.filename in sheets:
+                    values = sheets[info.filename]
                     root = ET.fromstring(content)
                     for cell in root.findall(".//m:sheetData/m:row/m:c", NS):
                         address = cell.get("r")
-                        if address not in cache or cell.find("m:f", NS) is None:
+                        if address not in values or cell.find("m:f", NS) is None:
                             continue
-                        value = cache[address]
+                        value = values[address]
                         node = cell.find("m:v", NS)
                         if node is None:
                             node = ET.SubElement(cell, "{%s}v" % NS["m"])
