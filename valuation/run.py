@@ -17,7 +17,7 @@ from .workbook import MAIN, RAW, build, records
 from .expanded import build_expanded, prior_close
 from .consensus import fetch_consensus
 
-TEMPLATE = Path(__file__).parent / "template" / "2027_valuation_20261020_133.xlsx"
+TEMPLATE = Path(__file__).parent / "template" / "valuation_universe_149.xlsx"
 CLOSE_CRON = "0 7 * * 1-5"
 EARLY_CRON = "17 2,3 * * 1-5"
 

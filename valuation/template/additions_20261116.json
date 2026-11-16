@@ -1,0 +1,89 @@
+{
+  "stocks": [
+    {
+      "code": "006400",
+      "name": "삼성SDI",
+      "source": "https://m.stock.naver.com/api/stock/006400/basic"
+    },
+    {
+      "code": "373220",
+      "name": "LG에너지솔루션",
+      "source": "https://m.stock.naver.com/api/stock/373220/basic"
+    },
+    {
+      "code": "010060",
+      "name": "OCI홀딩스",
+      "source": "https://m.stock.naver.com/api/stock/010060/basic"
+    },
+    {
+      "code": "066970",
+      "name": "엘앤에프",
+      "source": "https://m.stock.naver.com/api/stock/066970/basic"
+    },
+    {
+      "code": "086520",
+      "name": "에코프로",
+      "source": "https://m.stock.naver.com/api/stock/086520/basic"
+    },
+    {
+      "code": "247540",
+      "name": "에코프로비엠",
+      "source": "https://m.stock.naver.com/api/stock/247540/basic"
+    },
+    {
+      "code": "010170",
+      "name": "대한광통신",
+      "source": "https://m.stock.naver.com/api/stock/010170/basic"
+    },
+    {
+      "code": "138080",
+      "name": "오이솔루션",
+      "source": "https://m.stock.naver.com/api/stock/138080/basic"
+    },
+    {
+      "code": "298040",
+      "name": "효성중공업",
+      "source": "https://m.stock.naver.com/api/stock/298040/basic"
+    },
+    {
+      "code": "267260",
+      "name": "HD현대일렉트릭",
+      "source": "https://m.stock.naver.com/api/stock/267260/basic"
+    },
+    {
+      "code": "062040",
+      "name": "산일전기",
+      "source": "https://m.stock.naver.com/api/stock/062040/basic"
+    },
+    {
+      "code": "010120",
+      "name": "LS ELECTRIC",
+      "source": "https://m.stock.naver.com/api/stock/010120/basic"
+    },
+    {
+      "code": "103590",
+      "name": "일진전기",
+      "source": "https://m.stock.naver.com/api/stock/103590/basic"
+    },
+    {
+      "code": "000500",
+      "name": "가온전선",
+      "source": "https://m.stock.naver.com/api/stock/000500/basic"
+    },
+    {
+      "code": "001440",
+      "name": "대한전선",
+      "source": "https://m.stock.naver.com/api/stock/001440/basic"
+    },
+    {
+      "code": "006340",
+      "name": "대원전선",
+      "source": "https://m.stock.naver.com/api/stock/006340/basic"
+    },
+    {
+      "code": "004710",
+      "name": "한솔테크닉스",
+      "source": "https://m.stock.naver.com/api/stock/004710/basic"
+    }
+  ]
+}

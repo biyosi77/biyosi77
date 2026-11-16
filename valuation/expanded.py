@@ -56,8 +56,19 @@ def build_expanded(old_file, output, day, quotes, previous_day, previous, consen
     if set(codes) != set(quotes) or set(codes) != set(previous) or set(codes) != set(consensus):
         raise ValueError("expanded stock mapping mismatch")
     last = FIRST + len(codes) - 1
-    if last != 142:
-        raise ValueError("expected 133 stocks")
+    main["A2"] = f"국내주식 {len(codes)}종목 2026–2028년 밸류에이션"
+    if not codes:
+        raise ValueError("empty stock universe")
+    # Grow the approved layout using styles only; never copy another stock's data.
+    from .template.expand_20261020 import extend_sheet
+    for sheet, columns in ((main, 28), (raw, 60)):
+        prior_last = sheet.max_row
+        for row in range(prior_last + 1, last + 1):
+            extend_sheet(sheet, prior_last, row, columns)
+    audit_last = 6 + len(codes) * 6
+    prior_last = audit.max_row
+    for row in range(prior_last + 1, audit_last + 1):
+        extend_sheet(audit, prior_last, row, 15)
     for row in range(FIRST, last + 1):
         for col in range(1, 29):
             raw.cell(row, col).value = original.cell(row, col).value
@@ -177,7 +188,7 @@ def build_expanded(old_file, output, day, quotes, previous_day, previous, consen
         19: "FnGuide 비교 전기 이익 (억원)", 20: "FnGuide 비교 당기 이익 (억원)",
     }
     audit_table = audit.tables["YoyAuditTable"]
-    audit_table.ref = "A6:T804"
+    audit_table.ref = f"A6:T{audit_last}"
     if audit_table.autoFilter:
         audit_table.autoFilter.ref = audit_table.ref
     for col, label in audit_headers.items():
@@ -235,6 +246,24 @@ def build_expanded(old_file, output, day, quotes, previous_day, previous, consen
     # Add the KRX regular-session volume beside the stock code. Shift only
     # references to main-sheet cells; references to 원자료 retain their columns.
     main.insert_cols(4)
+    # openpyxl does not move conditional formatting on column insertion.
+    from openpyxl.formatting.formatting import ConditionalFormattingList
+    from openpyxl.formula.translate import Translator
+    old_rules = main.conditional_formatting
+    main.conditional_formatting = ConditionalFormattingList()
+    for group in old_rules:
+        for area in group.sqref.ranges:
+            start_col = area.min_col + (area.min_col >= 4)
+            end_col = area.max_col + (area.max_col >= 4)
+            end_row = last if area.max_row >= FIRST else area.max_row
+            address = f"{get_column_letter(start_col)}{area.min_row}:{get_column_letter(end_col)}{end_row}"
+            for rule in old_rules[group]:
+                adjusted = copy(rule)
+                if adjusted.formula:
+                    adjusted.formula = [
+                        Translator("=" + value.lstrip("="), origin="D10").translate_formula("E10").lstrip("=")
+                        for value in adjusted.formula]
+                main.conditional_formatting.add(address, adjusted)
     for row in range(FIRST, last + 1):
         code = ordered[row - FIRST]
         raw_row = codes[code]
@@ -292,7 +321,7 @@ def build_expanded(old_file, output, day, quotes, previous_day, previous, consen
              for address, value in cache.items()}
     for row, code in enumerate(ordered, FIRST):
         cache[f"D{row}"] = quotes[code].volume if quotes[code].volume is not None else "미확인"
-    audit["A2"]=f"133종목 · 798항목 | {day.isoformat()} 기준"
+    audit["A2"]=f"{len(codes)}종목 · {len(codes) * 6}항목 | {day.isoformat()} 기준"
     from openpyxl.workbook.properties import CalcProperties
     book.calculation = CalcProperties(fullCalcOnLoad=True)
     output=Path(output)
@@ -300,7 +329,7 @@ def build_expanded(old_file, output, day, quotes, previous_day, previous, consen
     book.save(output)
     _set_cached_values(output, cache, audit_cache=audit_cache)
     check=load_workbook(output,data_only=True)
-    assert len({str(check[MAIN].cell(r,3).value) for r in range(FIRST,last+1)})==133
+    assert len({str(check[MAIN].cell(r,3).value) for r in range(FIRST,last+1)})==len(codes)
     assert all(check[MAIN].cell(r,5).value == quotes[str(check[MAIN].cell(r,3).value)].price for r in range(FIRST,last+1))
     for row in range(FIRST, last + 1):
         code = str(check[MAIN].cell(row, 3).value)
@@ -314,7 +343,7 @@ def build_expanded(old_file, output, day, quotes, previous_day, previous, consen
                 raise DataError("saved volume provenance mismatch")
     if any(not same_yoy(check[audit.title][address].value, value) for address, value in audit_cache.items()):
         raise DataError("saved YoY audit values could not be verified")
-    return {"total_stocks":133,"successful_prices":sum(q.price is not None and q.shares is not None for q in quotes.values()),
+    return {"total_stocks":len(codes),"successful_prices":sum(q.price is not None and q.shares is not None for q in quotes.values()),
         "missing":[c for c in ordered if quotes[c].price is None or quotes[c].shares is None],
         "missing_volume":[c for c in ordered if quotes[c].volume is None],
         "volume_verification": {

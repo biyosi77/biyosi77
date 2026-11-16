@@ -38,8 +38,9 @@ def test_fnguide_uses_the_annual_table_and_keeps_total_net_separate():
         parse_annual_page(page, "005930")
 
 
-def test_all_yoy_formula_references_follow_stock_code_after_per_sort(tmp_path):
-    with REFERENCE.open("rb") as source:
+@pytest.mark.parametrize("template", [REFERENCE, REFERENCE.parent / "valuation_universe_149.xlsx"])
+def test_all_yoy_formula_references_follow_stock_code_after_per_sort(tmp_path, template):
+    with template.open("rb") as source:
         original = load_workbook(source, read_only=True, data_only=True)
         codes = [row[1] for row in original.worksheets[1].iter_rows(min_row=FIRST, values_only=True)]
         original.close()
@@ -62,7 +63,8 @@ def test_all_yoy_formula_references_follow_stock_code_after_per_sort(tmp_path):
         consensus[code] = {"years": years, "source": "FnGuide", "checked": "KST", "reason": ""}
 
     path = tmp_path / "expanded.xlsx"
-    build_expanded(REFERENCE, path, date(2026, 11, 9), quotes, date(2026, 11, 6), quotes, consensus)
+    summary = build_expanded(template, path, date(2026, 11, 9), quotes, date(2026, 11, 6), quotes, consensus)
+    assert summary["total_stocks"] == len(codes)
     formulas = load_workbook(path)
     values = load_workbook(path, data_only=True)
     main, _, audit = formulas.worksheets
@@ -75,8 +77,11 @@ def test_all_yoy_formula_references_follow_stock_code_after_per_sort(tmp_path):
         assert raw.cell(raw_row, 54).value == quotes[code].volume
         assert raw.cell(raw_row, 61).value == f"KIS {code}"
         assert raw.cell(raw_row, 65).value == f"evidence {code}"
-    assert raw.tables["SourceTable"].ref == "A9:BM142"
+    assert raw.tables["SourceTable"].ref == f"A9:BM{len(codes) + 9}"
     assert len(raw.tables["SourceTable"].tableColumns) == 65
+    assert audit.max_row == 6 + len(codes) * 6
+    assert all(area.max_row == len(codes) + 9 for group in main.conditional_formatting
+               for area in group.sqref.ranges)
     for cells in audit.iter_rows(min_row=7, values_only=False):
         code, key, year = cells[0].value, cells[2].value, int(cells[3].value[:4])
         offset = year - 2026
