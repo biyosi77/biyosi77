@@ -2,7 +2,7 @@ name: One-time KRX close data 2026-11-17
 on:
   push:
     branches: ['codex/krx-oi-20261117']
-    paths: ['.github/workflows/krx-oi-20261117.yml']
+  workflow_dispatch:
 permissions: {}
 jobs:
   fetch:
