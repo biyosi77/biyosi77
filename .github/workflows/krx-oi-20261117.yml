@@ -1,0 +1,85 @@
+name: One-time KRX close data 2026-11-17
+on:
+  push:
+    branches: ['codex/krx-oi-20261117']
+    paths: ['.github/workflows/krx-oi-20261117.yml']
+permissions: {}
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Fetch KOSPI200 close data and encrypt response
+        env:
+          KRX_API_KEY: ${{ secrets.KRX_API_KEY }}
+        run: |
+          umask 077
+          python3 - <<'PY'
+          import base64
+          import gzip
+          import http.client
+          import json
+          import os
+          import subprocess
+          
+          from pathlib import Path
+          from urllib.parse import urlencode
+          
+          key = os.environ.get("KRX_API_KEY", "").strip()
+          payload = {}
+          
+          for day in ("20261116", "20261117"):
+              for endpoint in ("fut_bydd_trd", "opt_bydd_trd"):
+                  name = day + "/" + endpoint
+                  if not key:
+                      payload[name] = {"error": "KRX_API_KEY is unavailable"}
+                      continue
+                  connection = http.client.HTTPSConnection("data-dbg.krx.co.kr", timeout=20)
+                  try:
+                      query = urlencode({"basDd": day})
+                      connection.request("GET", "/svc/apis/drv/" + endpoint + "?" + query,
+                                         headers={"AUTH_KEY": key, "Accept": "application/json"})
+                      response = connection.getresponse()
+                      entry = {"http": response.status}
+                      raw = response.read(20_000_001)
+                      if len(raw) > 20_000_000:
+                          entry["error"] = "Response exceeded limit"
+                      else:
+                          try:
+                              body = json.loads(raw)
+                          except ValueError:
+                              entry["error"] = "Non-JSON response"
+                          else:
+                              if isinstance(body, dict) and isinstance(body.get("OutBlock_1"), list):
+                                  rows = body["OutBlock_1"]
+                                  def matches(row):
+                                      label = "".join(str(row.get(f, "")) for f in ("PROD_NM", "ISU_NM"))
+                                      label = label.upper().replace(" ", "")
+                                      return ("코스피200" in label or "KOSPI200" in label) and "미니" not in label and "MINI" not in label
+                                  entry["total_rows"] = len(rows)
+                                  entry["rows"] = [row for row in rows if isinstance(row, dict) and matches(row)]
+                                  if not entry["rows"]:
+                                      entry["products"] = sorted({str(r.get("PROD_NM", "")) for r in rows if isinstance(r, dict)})[:50]
+                              elif isinstance(body, dict):
+                                  entry["resp_code"] = str(body.get("respCode", "") or body.get("code", ""))[:40]
+                                  entry["error"] = "No OutBlock_1"
+                              else:
+                                  entry["error"] = "Unexpected JSON shape"
+                      payload[name] = entry
+                  except (OSError, http.client.HTTPException) as exc:
+                      payload[name] = {"error": type(exc).__name__}
+                  finally:
+                      connection.close()
+          
+          Path("recipient.pem").write_text("-----BEGIN CERTIFICATE-----\nMIIDITCCAgmgAwIBAgIUGBbuWo+OMzKFdJWkoTRg4ATTFJkwDQYJKoZIhvcNAQEL\nBQAwIDEeMBwGA1UEAwwVS1JYLTIwMjYxMTE3LXRyYW5zZmVyMB4XDTI2MTExNzEx\nMTYwM1oXDTI2MTEyMDExMTYwM1owIDEeMBwGA1UEAwwVS1JYLTIwMjYxMTE3LXRy\nYW5zZmVyMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAiYRH96D6aHGk\n9IuhrA+wHTroJcDgtXJyVUcrTIstcltXArQK9p2WqB86LLT3lE+rukFzkk9lQ7pV\nyXmN0DfVAy85D3bj2nPoPkQ80Ct3rYhlEGdCdWbLC/5ti2XZw1tf4qePLmAB51Eq\n/tzt43LZFilCURd3K0l78XZZkTTJLxj2hlGwlQNJJYiAxYXqtAxNAVNt00wj7NO8\n7wWBq3LJlSPWacY30AEu/wEi0sFUHUvdWDI5s5EpegCGTIQExhXtb9KR+tn0irl0\nlq0riotDeWBG2mFJkam85nmtMy/i/NhdR+ifIsIKEP0r0T++Vt3F4UwmqffnQ4EA\n+y0giyiGAwIDAQABo1MwUTAdBgNVHQ4EFgQUCmbfB1yTlqYSk7ktp9G4JnKf8PQw\nHwYDVR0jBBgwFoAUCmbfB1yTlqYSk7ktp9G4JnKf8PQwDwYDVR0TAQH/BAUwAwEB\n/zANBgkqhkiG9w0BAQsFAAOCAQEAYRhSNekfGpARH1HaSRzXilKYQdGpt1i808zS\n+ouTO0SrooE7hv2Pi6yP1p//HX9F3FOI+CXyMDv+/a/xtrf60atg7NHeKz82GBbL\n7z+clzqOU2SdkXCO/qxJiW9CdwS867nQNLJY/zdjEFpVCLb4DfZz4CrQ7oj+Jh18\nMQ3y6HxJkD+dhbgLEfn703mQqCbKIenHdbWVDUYI6/qiAJtRnJC2R8qUpRV+PrLI\nxvGV+XD5t8XOQBQxq41D6jYs/bs36PWPVVRIHM9DA/dL0LUULMXzGD08N5STc4nI\nPwolmTaajX3raQH2bGaimUUh8z7lv+jG484fxHAX1UWa3Doz4Q==\n-----END CERTIFICATE-----\n")
+          data = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode()
+          encrypted = subprocess.run(
+              ["openssl", "cms", "-encrypt", "-binary", "-aes-256-gcm", "-outform", "DER", "recipient.pem"],
+              input=gzip.compress(data), stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, check=True,
+          ).stdout
+          Path("krx-result.cms").write_bytes(encrypted)
+          encoded = base64.b64encode(encrypted).decode()
+          for i in range(0, len(encoded), 1200):
+              print(f"KRX_CMS_{i // 1200:03d} {encoded[i:i + 1200]}")
+          print("KRX encrypted response complete")
+          PY
