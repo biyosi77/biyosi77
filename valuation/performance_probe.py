@@ -9,10 +9,10 @@ from .workbook import records
 
 _, codes = records(TEMPLATE)
 market = MarketData()
-dates = [date(2026, 7, 30), date(2026, 8, 28)]
-candidate = date(2026, 10, 6)
-while candidate <= date(2026, 11, 20):
-    if candidate.weekday() < 5:
+dates = []
+candidate = date(2026, 7, 31)
+while candidate <= date(2026, 10, 5):
+    if candidate.weekday() < 5 and candidate != date(2026, 8, 28):
         dates.append(candidate)
     candidate += timedelta(days=1)
 result = {"checked_at": datetime.now(KST).isoformat(), "days": {}, "closed": [], "codes": list(codes)}
