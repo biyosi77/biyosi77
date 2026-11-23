@@ -10,6 +10,7 @@ from openpyxl.utils import get_column_letter, column_index_from_string
 from openpyxl.worksheet.table import TableColumn
 
 from .api import DataError
+from .returns import append_returns, DATES
 from .workbook import MAIN, RAW, FIRST, _set_cached_values, metric, yoy, yoy_formula
 
 REFERENCE = Path(__file__).parent / "template" / "valuation_2026_2028.xlsx"
@@ -321,6 +322,7 @@ def build_expanded(old_file, output, day, quotes, previous_day, previous, consen
              for address, value in cache.items()}
     for row, code in enumerate(ordered, FIRST):
         cache[f"D{row}"] = quotes[code].volume if quotes[code].volume is not None else "미확인"
+    return_values = append_returns(main, raw, ordered, codes, cache)
     audit["A2"]=f"{len(codes)}종목 · {len(codes) * 6}항목 | {day.isoformat()} 기준"
     from openpyxl.workbook.properties import CalcProperties
     book.calculation = CalcProperties(fullCalcOnLoad=True)
@@ -343,9 +345,16 @@ def build_expanded(old_file, output, day, quotes, previous_day, previous, consen
                 raise DataError("saved volume provenance mismatch")
     if any(not same_yoy(check[audit.title][address].value, value) for address, value in audit_cache.items()):
         raise DataError("saved YoY audit values could not be verified")
+    for row, code in enumerate(ordered, FIRST):
+        if any(not same_yoy(check[MAIN].cell(row, 30 + i).value, value)
+               for i, value in enumerate(return_values[code])):
+            raise DataError("saved fixed-date return mismatch")
     return {"total_stocks":len(codes),"successful_prices":sum(q.price is not None and q.shares is not None for q in quotes.values()),
         "missing":[c for c in ordered if quotes[c].price is None or quotes[c].shares is None],
         "missing_volume":[c for c in ordered if quotes[c].volume is None],
+        "fixed_returns": {"dates": DATES, "verified_stocks": sum(
+            all(isinstance(v, (int, float)) for v in values) for values in return_values.values()),
+            "missing": [c for c, values in return_values.items() if "미확인" in values]},
         "volume_verification": {
             "verified_stocks": sum(q.volume is not None for q in quotes.values()),
             "missing_reasons": {c: quotes[c].volume_reason or "거래량 검증 정보 없음"

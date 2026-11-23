@@ -1,0 +1,2404 @@
+{
+  "dates": [
+    "2026-07-30",
+    "2026-08-28",
+    "2026-10-06",
+    "2026-11-20"
+  ],
+  "checked_at": "2026-11-23T11:28:46.977039+09:00",
+  "basis": "KRX regular-session unadjusted close; KRW",
+  "days": {
+    "2026-07-30": {
+      "005930": {
+        "close": 207000,
+        "source": "KRX stk_bydd_trd"
+      },
+      "000660": {
+        "close": 1322000,
+        "source": "KRX stk_bydd_trd"
+      },
+      "033160": {
+        "close": 11150,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "011560": {
+        "close": 18130,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "029460": {
+        "close": 25600,
+        "source": "KRX stk_bydd_trd"
+      },
+      "083500": {
+        "close": 9800,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "104830": {
+        "close": 26400,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "272110": {
+        "close": 20050,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "382800": {
+        "close": 3640,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "086390": {
+        "close": 6610,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "102710": {
+        "close": 34900,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "054450": {
+        "close": 7390,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "160980": {
+        "close": 23400,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "114810": {
+        "close": 7250,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "036200": {
+        "close": 6300,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "170920": {
+        "close": 26600,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "011930": {
+        "close": 12050,
+        "source": "KRX stk_bydd_trd"
+      },
+      "195870": {
+        "close": 38150,
+        "source": "KRX stk_bydd_trd"
+      },
+      "089890": {
+        "close": 16170,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "108320": {
+        "close": 30700,
+        "source": "KRX stk_bydd_trd"
+      },
+      "074600": {
+        "close": 20650,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "053610": {
+        "close": 48300,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "417840": {
+        "close": 7220,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "482630": {
+        "close": 9370,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "172670": {
+        "close": 7440,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "000990": {
+        "close": 71200,
+        "source": "KRX stk_bydd_trd"
+      },
+      "144960": {
+        "close": 7800,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "147760": {
+        "close": 2325,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "067310": {
+        "close": 24750,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "166090": {
+        "close": 43150,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "168360": {
+        "close": 9220,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "112290": {
+        "close": 7720,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "405100": {
+        "close": 8670,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "080580": {
+        "close": 8610,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "083450": {
+        "close": 35950,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "146320": {
+        "close": 7330,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "122640": {
+        "close": 17200,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "089970": {
+        "close": 50600,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "014680": {
+        "close": 190700,
+        "source": "KRX stk_bydd_trd"
+      },
+      "200710": {
+        "close": 21750,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "077360": {
+        "close": 6900,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "357780": {
+        "close": 224500,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "330860": {
+        "close": 18650,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "033640": {
+        "close": 11980,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "007810": {
+        "close": 38500,
+        "source": "KRX stk_bydd_trd"
+      },
+      "425420": {
+        "close": 24850,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "064290": {
+        "close": 22200,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "348210": {
+        "close": 25300,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "222800": {
+        "close": 63800,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "092870": {
+        "close": 10960,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "356860": {
+        "close": 20550,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "131290": {
+        "close": 143600,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "440110": {
+        "close": 48800,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "003160": {
+        "close": 16470,
+        "source": "KRX stk_bydd_trd"
+      },
+      "420770": {
+        "close": 84200,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "452430": {
+        "close": 20000,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "253590": {
+        "close": 6900,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "490470": {
+        "close": 12810,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "319660": {
+        "close": 101400,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "007660": {
+        "close": 59200,
+        "source": "KRX stk_bydd_trd"
+      },
+      "093370": {
+        "close": 6930,
+        "source": "KRX stk_bydd_trd"
+      },
+      "031980": {
+        "close": 77200,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "353200": {
+        "close": 74500,
+        "source": "KRX stk_bydd_trd"
+      },
+      "252990": {
+        "close": 9070,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "183300": {
+        "close": 54400,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "095610": {
+        "close": 100000,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "064760": {
+        "close": 138200,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "094360": {
+        "close": 8290,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "445090": {
+        "close": 14720,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "131970": {
+        "close": 51800,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "084370": {
+        "close": 88600,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "058470": {
+        "close": 55200,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "240810": {
+        "close": 76300,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "036540": {
+        "close": 3885,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "036810": {
+        "close": 15390,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "403870": {
+        "close": 28550,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "232140": {
+        "close": 7140,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "095340": {
+        "close": 106500,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "140860": {
+        "close": 227000,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "039030": {
+        "close": 240000,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "098460": {
+        "close": 22550,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "042700": {
+        "close": 167600,
+        "source": "KRX stk_bydd_trd"
+      },
+      "036930": {
+        "close": 98300,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "098120": {
+        "close": 17120,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "085910": {
+        "close": 13040,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "043260": {
+        "close": 11850,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "327260": {
+        "close": 17220,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "009150": {
+        "close": 879000,
+        "source": "KRX stk_bydd_trd"
+      },
+      "089030": {
+        "close": 31900,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "079370": {
+        "close": 6970,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "078350": {
+        "close": 14610,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "218410": {
+        "close": 35300,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "322310": {
+        "close": 11150,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "323350": {
+        "close": 5930,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "192650": {
+        "close": 3900,
+        "source": "KRX stk_bydd_trd"
+      },
+      "200470": {
+        "close": 3880,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "036830": {
+        "close": 27000,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "101490": {
+        "close": 34250,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "005290": {
+        "close": 33150,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "281740": {
+        "close": 9650,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "101160": {
+        "close": 25300,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "052710": {
+        "close": 11230,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "010060": {
+        "close": 175400,
+        "source": "KRX stk_bydd_trd"
+      },
+      "265520": {
+        "close": 16020,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "089010": {
+        "close": 16700,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "388210": {
+        "close": 59900,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "092070": {
+        "close": 10690,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "281820": {
+        "close": 55100,
+        "source": "KRX stk_bydd_trd"
+      },
+      "045100": {
+        "close": 26950,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "037350": {
+        "close": 6260,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "053080": {
+        "close": 6980,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "056190": {
+        "close": 17930,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "039440": {
+        "close": 17980,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "306620": {
+        "close": 1318,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "178320": {
+        "close": 27900,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "159010": {
+        "close": 11120,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "489790": {
+        "close": 35000,
+        "source": "KRX stk_bydd_trd"
+      },
+      "081180": {
+        "close": 4450,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "475960": {
+        "close": 29600,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "217190": {
+        "close": 4200,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "412350": {
+        "close": 3050,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "071280": {
+        "close": 5200,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "187870": {
+        "close": 9450,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "219130": {
+        "close": 55500,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "446540": {
+        "close": 5310,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "424980": {
+        "close": 5180,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "317330": {
+        "close": 8620,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "425040": {
+        "close": 6600,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "278280": {
+        "close": 28250,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "001820": {
+        "close": 57800,
+        "source": "KRX stk_bydd_trd"
+      },
+      "149950": {
+        "close": 6990,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "078600": {
+        "close": 62400,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "005070": {
+        "close": 28000,
+        "source": "KRX stk_bydd_trd"
+      },
+      "006400": {
+        "close": 358500,
+        "source": "KRX stk_bydd_trd"
+      },
+      "373220": {
+        "close": 320000,
+        "source": "KRX stk_bydd_trd"
+      },
+      "066970": {
+        "close": 67000,
+        "source": "KRX stk_bydd_trd"
+      },
+      "086520": {
+        "close": 70600,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "247540": {
+        "close": 96500,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "010170": {
+        "close": 7160,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "138080": {
+        "close": 13300,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "298040": {
+        "close": 1894000,
+        "source": "KRX stk_bydd_trd"
+      },
+      "267260": {
+        "close": 583000,
+        "source": "KRX stk_bydd_trd"
+      },
+      "062040": {
+        "close": 120800,
+        "source": "KRX stk_bydd_trd"
+      },
+      "010120": {
+        "close": 150300,
+        "source": "KRX stk_bydd_trd"
+      },
+      "103590": {
+        "close": 45650,
+        "source": "KRX stk_bydd_trd"
+      },
+      "000500": {
+        "close": 107600,
+        "source": "KRX stk_bydd_trd"
+      },
+      "001440": {
+        "close": 20800,
+        "source": "KRX stk_bydd_trd"
+      },
+      "006340": {
+        "close": 10320,
+        "source": "KRX stk_bydd_trd"
+      },
+      "004710": {
+        "close": 5640,
+        "source": "KRX stk_bydd_trd"
+      }
+    },
+    "2026-08-28": {
+      "005930": {
+        "close": 257000,
+        "source": "KRX stk_bydd_trd"
+      },
+      "000660": {
+        "close": 1653000,
+        "source": "KRX stk_bydd_trd"
+      },
+      "033160": {
+        "close": 13920,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "011560": {
+        "close": 26500,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "029460": {
+        "close": 40950,
+        "source": "KRX stk_bydd_trd"
+      },
+      "083500": {
+        "close": 11840,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "104830": {
+        "close": 33000,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "272110": {
+        "close": 24500,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "382800": {
+        "close": 5280,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "086390": {
+        "close": 10530,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "102710": {
+        "close": 45250,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "054450": {
+        "close": 9620,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "160980": {
+        "close": 23950,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "114810": {
+        "close": 13020,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "036200": {
+        "close": 8870,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "170920": {
+        "close": 33000,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "011930": {
+        "close": 16910,
+        "source": "KRX stk_bydd_trd"
+      },
+      "195870": {
+        "close": 54000,
+        "source": "KRX stk_bydd_trd"
+      },
+      "089890": {
+        "close": 23500,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "108320": {
+        "close": 37200,
+        "source": "KRX stk_bydd_trd"
+      },
+      "074600": {
+        "close": 26150,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "053610": {
+        "close": 60700,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "417840": {
+        "close": 13320,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "482630": {
+        "close": 13250,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "172670": {
+        "close": 10400,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "000990": {
+        "close": 93900,
+        "source": "KRX stk_bydd_trd"
+      },
+      "144960": {
+        "close": 9640,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "147760": {
+        "close": 3230,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "067310": {
+        "close": 35350,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "166090": {
+        "close": 52600,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "168360": {
+        "close": 13280,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "112290": {
+        "close": 10220,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "405100": {
+        "close": 12580,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "080580": {
+        "close": 20300,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "083450": {
+        "close": 44350,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "146320": {
+        "close": 9960,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "122640": {
+        "close": 30200,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "089970": {
+        "close": 58000,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "014680": {
+        "close": 203000,
+        "source": "KRX stk_bydd_trd"
+      },
+      "200710": {
+        "close": 25500,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "077360": {
+        "close": 9850,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "357780": {
+        "close": 346500,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "330860": {
+        "close": 26300,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "033640": {
+        "close": 23400,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "007810": {
+        "close": 60100,
+        "source": "KRX stk_bydd_trd"
+      },
+      "425420": {
+        "close": 47500,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "064290": {
+        "close": 32500,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "348210": {
+        "close": 32300,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "222800": {
+        "close": 122800,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "092870": {
+        "close": 25900,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "356860": {
+        "close": 39600,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "131290": {
+        "close": 238500,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "440110": {
+        "close": 63300,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "003160": {
+        "close": 24350,
+        "source": "KRX stk_bydd_trd"
+      },
+      "420770": {
+        "close": 109800,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "452430": {
+        "close": 28250,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "253590": {
+        "close": 10900,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "490470": {
+        "close": 15360,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "319660": {
+        "close": 128600,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "007660": {
+        "close": 112800,
+        "source": "KRX stk_bydd_trd"
+      },
+      "093370": {
+        "close": 12520,
+        "source": "KRX stk_bydd_trd"
+      },
+      "031980": {
+        "close": 120100,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "353200": {
+        "close": 107600,
+        "source": "KRX stk_bydd_trd"
+      },
+      "252990": {
+        "close": 13890,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "183300": {
+        "close": 25400,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "095610": {
+        "close": 142700,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "064760": {
+        "close": 238500,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "094360": {
+        "close": 10640,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "445090": {
+        "close": 21000,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "131970": {
+        "close": 81700,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "084370": {
+        "close": 134000,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "058470": {
+        "close": 66800,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "240810": {
+        "close": 111100,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "036540": {
+        "close": 5610,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "036810": {
+        "close": 24650,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "403870": {
+        "close": 51100,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "232140": {
+        "close": 11350,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "095340": {
+        "close": 173400,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "140860": {
+        "close": 271000,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "039030": {
+        "close": 398500,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "098460": {
+        "close": 28700,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "042700": {
+        "close": 219500,
+        "source": "KRX stk_bydd_trd"
+      },
+      "036930": {
+        "close": 176800,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "098120": {
+        "close": 41850,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "085910": {
+        "close": 16760,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "043260": {
+        "close": 15740,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "327260": {
+        "close": 34900,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "009150": {
+        "close": 1421000,
+        "source": "KRX stk_bydd_trd"
+      },
+      "089030": {
+        "close": 49900,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "079370": {
+        "close": 10290,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "078350": {
+        "close": 20600,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "218410": {
+        "close": 46800,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "322310": {
+        "close": 13160,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "323350": {
+        "close": 7640,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "192650": {
+        "close": 6150,
+        "source": "KRX stk_bydd_trd"
+      },
+      "200470": {
+        "close": 6030,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "036830": {
+        "close": 43750,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "101490": {
+        "close": 41200,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "005290": {
+        "close": 42400,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "281740": {
+        "close": 11980,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "101160": {
+        "close": 29900,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "052710": {
+        "close": 10820,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "010060": {
+        "close": 274500,
+        "source": "KRX stk_bydd_trd"
+      },
+      "265520": {
+        "close": 19290,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "089010": {
+        "close": 22500,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "388210": {
+        "close": 72500,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "092070": {
+        "close": 12880,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "281820": {
+        "close": 66700,
+        "source": "KRX stk_bydd_trd"
+      },
+      "045100": {
+        "close": 30050,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "037350": {
+        "close": 7540,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "053080": {
+        "close": 9070,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "056190": {
+        "close": 23950,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "039440": {
+        "close": 20150,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "306620": {
+        "close": 1930,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "178320": {
+        "close": 38950,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "159010": {
+        "close": 20500,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "489790": {
+        "close": 50200,
+        "source": "KRX stk_bydd_trd"
+      },
+      "081180": {
+        "close": 5200,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "475960": {
+        "close": 30050,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "217190": {
+        "close": 6200,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "412350": {
+        "close": 4280,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "071280": {
+        "close": 6670,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "187870": {
+        "close": 10860,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "219130": {
+        "close": 62100,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "446540": {
+        "close": 6850,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "424980": {
+        "close": 7230,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "317330": {
+        "close": 10970,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "425040": {
+        "close": 8860,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "278280": {
+        "close": 43200,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "001820": {
+        "close": 110200,
+        "source": "KRX stk_bydd_trd"
+      },
+      "149950": {
+        "close": 9000,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "078600": {
+        "close": 91800,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "005070": {
+        "close": 40400,
+        "source": "KRX stk_bydd_trd"
+      },
+      "006400": {
+        "close": 571000,
+        "source": "KRX stk_bydd_trd"
+      },
+      "373220": {
+        "close": 370000,
+        "source": "KRX stk_bydd_trd"
+      },
+      "066970": {
+        "close": 134800,
+        "source": "KRX stk_bydd_trd"
+      },
+      "086520": {
+        "close": 90200,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "247540": {
+        "close": 118200,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "010170": {
+        "close": 14310,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "138080": {
+        "close": 23400,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "298040": {
+        "close": 3153000,
+        "source": "KRX stk_bydd_trd"
+      },
+      "267260": {
+        "close": 814000,
+        "source": "KRX stk_bydd_trd"
+      },
+      "062040": {
+        "close": 202500,
+        "source": "KRX stk_bydd_trd"
+      },
+      "010120": {
+        "close": 214500,
+        "source": "KRX stk_bydd_trd"
+      },
+      "103590": {
+        "close": 72600,
+        "source": "KRX stk_bydd_trd"
+      },
+      "000500": {
+        "close": 204000,
+        "source": "KRX stk_bydd_trd"
+      },
+      "001440": {
+        "close": 29700,
+        "source": "KRX stk_bydd_trd"
+      },
+      "006340": {
+        "close": 13610,
+        "source": "KRX stk_bydd_trd"
+      },
+      "004710": {
+        "close": 6770,
+        "source": "KRX stk_bydd_trd"
+      }
+    },
+    "2026-10-06": {
+      "005930": {
+        "close": 272000,
+        "source": "KRX stk_bydd_trd"
+      },
+      "000660": {
+        "close": 1773000,
+        "source": "KRX stk_bydd_trd"
+      },
+      "033160": {
+        "close": 19500,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "011560": {
+        "close": 24350,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "029460": {
+        "close": 45450,
+        "source": "KRX stk_bydd_trd"
+      },
+      "083500": {
+        "close": 14550,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "104830": {
+        "close": 41600,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "272110": {
+        "close": 32550,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "382800": {
+        "close": 6540,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "086390": {
+        "close": 15400,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "102710": {
+        "close": 50100,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "054450": {
+        "close": 10430,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "160980": {
+        "close": 29100,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "114810": {
+        "close": 15350,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "036200": {
+        "close": 11030,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "170920": {
+        "close": 44250,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "011930": {
+        "close": 20000,
+        "source": "KRX stk_bydd_trd"
+      },
+      "195870": {
+        "close": 66700,
+        "source": "KRX stk_bydd_trd"
+      },
+      "089890": {
+        "close": 35500,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "108320": {
+        "close": 38250,
+        "source": "KRX stk_bydd_trd"
+      },
+      "074600": {
+        "close": 32800,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "053610": {
+        "close": 85700,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "417840": {
+        "close": 19470,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "482630": {
+        "close": 15600,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "172670": {
+        "close": 15180,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "000990": {
+        "close": 139700,
+        "source": "KRX stk_bydd_trd"
+      },
+      "144960": {
+        "close": 13870,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "147760": {
+        "close": 4100,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "067310": {
+        "close": 52800,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "166090": {
+        "close": 65000,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "168360": {
+        "close": 16850,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "112290": {
+        "close": 12480,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "405100": {
+        "close": 17420,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "080580": {
+        "close": 28550,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "083450": {
+        "close": 56000,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "146320": {
+        "close": 12030,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "122640": {
+        "close": 33800,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "089970": {
+        "close": 70400,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "014680": {
+        "close": 277500,
+        "source": "KRX stk_bydd_trd"
+      },
+      "200710": {
+        "close": 29350,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "077360": {
+        "close": 14600,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "357780": {
+        "close": 425000,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "330860": {
+        "close": 33950,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "033640": {
+        "close": 32350,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "007810": {
+        "close": 88700,
+        "source": "KRX stk_bydd_trd"
+      },
+      "425420": {
+        "close": 68200,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "064290": {
+        "close": 60400,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "348210": {
+        "close": 40500,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "222800": {
+        "close": 175000,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "092870": {
+        "close": 53900,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "356860": {
+        "close": 50400,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "131290": {
+        "close": 313500,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "440110": {
+        "close": 86100,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "003160": {
+        "close": 42450,
+        "source": "KRX stk_bydd_trd"
+      },
+      "420770": {
+        "close": 135500,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "452430": {
+        "close": 36200,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "253590": {
+        "close": 16230,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "490470": {
+        "close": 21800,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "319660": {
+        "close": 154000,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "007660": {
+        "close": 131900,
+        "source": "KRX stk_bydd_trd"
+      },
+      "093370": {
+        "close": 16290,
+        "source": "KRX stk_bydd_trd"
+      },
+      "031980": {
+        "close": 197000,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "353200": {
+        "close": 157900,
+        "source": "KRX stk_bydd_trd"
+      },
+      "252990": {
+        "close": 19690,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "183300": {
+        "close": 34050,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "095610": {
+        "close": 176400,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "064760": {
+        "close": 296500,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "094360": {
+        "close": 12830,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "445090": {
+        "close": 23300,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "131970": {
+        "close": 120000,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "084370": {
+        "close": 180100,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "058470": {
+        "close": 86900,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "240810": {
+        "close": 141300,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "036540": {
+        "close": 11730,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "036810": {
+        "close": 35850,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "403870": {
+        "close": 68800,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "232140": {
+        "close": 18130,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "095340": {
+        "close": 205500,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "140860": {
+        "close": 307000,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "039030": {
+        "close": 544000,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "098460": {
+        "close": 36450,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "042700": {
+        "close": 278000,
+        "source": "KRX stk_bydd_trd"
+      },
+      "036930": {
+        "close": 278500,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "098120": {
+        "close": 60500,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "085910": {
+        "close": 20000,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "043260": {
+        "close": 32350,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "327260": {
+        "close": 57800,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "009150": {
+        "close": 1675000,
+        "source": "KRX stk_bydd_trd"
+      },
+      "089030": {
+        "close": 57300,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "079370": {
+        "close": 14510,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "078350": {
+        "close": 36350,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "218410": {
+        "close": 62400,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "322310": {
+        "close": 16730,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "323350": {
+        "close": 10060,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "192650": {
+        "close": 9650,
+        "source": "KRX stk_bydd_trd"
+      },
+      "200470": {
+        "close": 10130,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "036830": {
+        "close": 49300,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "101490": {
+        "close": 53800,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "005290": {
+        "close": 52300,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "281740": {
+        "close": 13070,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "101160": {
+        "close": 32950,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "052710": {
+        "close": 22700,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "010060": {
+        "close": 244500,
+        "source": "KRX stk_bydd_trd"
+      },
+      "265520": {
+        "close": 20800,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "089010": {
+        "close": 28950,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "388210": {
+        "close": 93400,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "092070": {
+        "close": 15000,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "281820": {
+        "close": 107400,
+        "source": "KRX stk_bydd_trd"
+      },
+      "045100": {
+        "close": 34300,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "037350": {
+        "close": 8460,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "053080": {
+        "close": 9650,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "056190": {
+        "close": 31800,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "039440": {
+        "close": 25900,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "306620": {
+        "close": 2210,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "178320": {
+        "close": 42950,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "159010": {
+        "close": 32150,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "489790": {
+        "close": 51300,
+        "source": "KRX stk_bydd_trd"
+      },
+      "081180": {
+        "close": 7100,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "475960": {
+        "close": 35900,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "217190": {
+        "close": 8290,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "412350": {
+        "close": 6820,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "071280": {
+        "close": 9080,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "187870": {
+        "close": 13020,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "219130": {
+        "close": 92200,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "446540": {
+        "close": 11550,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "424980": {
+        "close": 10110,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "317330": {
+        "close": 13630,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "425040": {
+        "close": 15300,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "278280": {
+        "close": 39400,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "001820": {
+        "close": 158800,
+        "source": "KRX stk_bydd_trd"
+      },
+      "149950": {
+        "close": 12670,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "078600": {
+        "close": 111400,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "005070": {
+        "close": 47750,
+        "source": "KRX stk_bydd_trd"
+      },
+      "006400": {
+        "close": 575000,
+        "source": "KRX stk_bydd_trd"
+      },
+      "373220": {
+        "close": 390000,
+        "source": "KRX stk_bydd_trd"
+      },
+      "066970": {
+        "close": 124100,
+        "source": "KRX stk_bydd_trd"
+      },
+      "086520": {
+        "close": 95400,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "247540": {
+        "close": 128900,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "010170": {
+        "close": 18530,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "138080": {
+        "close": 32950,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "298040": {
+        "close": 2807000,
+        "source": "KRX stk_bydd_trd"
+      },
+      "267260": {
+        "close": 683000,
+        "source": "KRX stk_bydd_trd"
+      },
+      "062040": {
+        "close": 235000,
+        "source": "KRX stk_bydd_trd"
+      },
+      "010120": {
+        "close": 217500,
+        "source": "KRX stk_bydd_trd"
+      },
+      "103590": {
+        "close": 87900,
+        "source": "KRX stk_bydd_trd"
+      },
+      "000500": {
+        "close": 327000,
+        "source": "KRX stk_bydd_trd"
+      },
+      "001440": {
+        "close": 31750,
+        "source": "KRX stk_bydd_trd"
+      },
+      "006340": {
+        "close": 13390,
+        "source": "KRX stk_bydd_trd"
+      },
+      "004710": {
+        "close": 12000,
+        "source": "KRX stk_bydd_trd"
+      }
+    },
+    "2026-11-20": {
+      "005930": {
+        "close": 183100,
+        "source": "KRX stk_bydd_trd"
+      },
+      "000660": {
+        "close": 1113000,
+        "source": "KRX stk_bydd_trd"
+      },
+      "033160": {
+        "close": 9860,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "011560": {
+        "close": 19810,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "029460": {
+        "close": 43300,
+        "source": "KRX stk_bydd_trd"
+      },
+      "083500": {
+        "close": 12030,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "104830": {
+        "close": 33000,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "272110": {
+        "close": 21150,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "382800": {
+        "close": 4170,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "086390": {
+        "close": 9580,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "102710": {
+        "close": 38550,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "054450": {
+        "close": 7220,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "160980": {
+        "close": 17050,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "114810": {
+        "close": 8110,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "036200": {
+        "close": 8230,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "170920": {
+        "close": 25700,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "011930": {
+        "close": 10020,
+        "source": "KRX stk_bydd_trd"
+      },
+      "195870": {
+        "close": 39200,
+        "source": "KRX stk_bydd_trd"
+      },
+      "089890": {
+        "close": 36900,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "108320": {
+        "close": 22450,
+        "source": "KRX stk_bydd_trd"
+      },
+      "074600": {
+        "close": 24900,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "053610": {
+        "close": 63900,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "417840": {
+        "close": 9570,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "482630": {
+        "close": 8490,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "172670": {
+        "close": 6150,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "000990": {
+        "close": 68500,
+        "source": "KRX stk_bydd_trd"
+      },
+      "144960": {
+        "close": 10920,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "147760": {
+        "close": 2160,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "067310": {
+        "close": 21900,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "166090": {
+        "close": 42500,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "168360": {
+        "close": 6700,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "112290": {
+        "close": 6900,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "405100": {
+        "close": 13540,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "080580": {
+        "close": 14090,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "083450": {
+        "close": 47200,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "146320": {
+        "close": 7850,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "122640": {
+        "close": 22250,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "089970": {
+        "close": 37250,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "014680": {
+        "close": 170000,
+        "source": "KRX stk_bydd_trd"
+      },
+      "200710": {
+        "close": 15250,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "077360": {
+        "close": 6450,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "357780": {
+        "close": 239000,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "330860": {
+        "close": 16930,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "033640": {
+        "close": 16940,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "007810": {
+        "close": 91000,
+        "source": "KRX stk_bydd_trd"
+      },
+      "425420": {
+        "close": 65800,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "064290": {
+        "close": 39050,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "348210": {
+        "close": 23050,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "222800": {
+        "close": 99700,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "092870": {
+        "close": 51300,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "356860": {
+        "close": 42550,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "131290": {
+        "close": 168000,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "440110": {
+        "close": 27750,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "003160": {
+        "close": 25200,
+        "source": "KRX stk_bydd_trd"
+      },
+      "420770": {
+        "close": 70700,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "452430": {
+        "close": 21150,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "253590": {
+        "close": 11320,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "490470": {
+        "close": 11160,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "319660": {
+        "close": 79900,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "007660": {
+        "close": 69600,
+        "source": "KRX stk_bydd_trd"
+      },
+      "093370": {
+        "close": 8130,
+        "source": "KRX stk_bydd_trd"
+      },
+      "031980": {
+        "close": 119000,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "353200": {
+        "close": 73900,
+        "source": "KRX stk_bydd_trd"
+      },
+      "252990": {
+        "close": 13990,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "183300": {
+        "close": 17720,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "095610": {
+        "close": 78200,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "064760": {
+        "close": 167000,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "094360": {
+        "close": 9900,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "445090": {
+        "close": 13900,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "131970": {
+        "close": 66600,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "084370": {
+        "close": 71000,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "058470": {
+        "close": 45350,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "240810": {
+        "close": 65600,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "036540": {
+        "close": 8110,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "036810": {
+        "close": 19690,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "403870": {
+        "close": 37800,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "232140": {
+        "close": 14700,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "095340": {
+        "close": 127100,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "140860": {
+        "close": 178600,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "039030": {
+        "close": 288000,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "098460": {
+        "close": 21550,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "042700": {
+        "close": 153800,
+        "source": "KRX stk_bydd_trd"
+      },
+      "036930": {
+        "close": 145100,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "098120": {
+        "close": 34100,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "085910": {
+        "close": 10900,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "043260": {
+        "close": 24550,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "327260": {
+        "close": 26050,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "009150": {
+        "close": 774000,
+        "source": "KRX stk_bydd_trd"
+      },
+      "089030": {
+        "close": 34050,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "079370": {
+        "close": 9180,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "078350": {
+        "close": 22600,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "218410": {
+        "close": 52200,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "322310": {
+        "close": 8510,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "323350": {
+        "close": 15060,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "192650": {
+        "close": 5220,
+        "source": "KRX stk_bydd_trd"
+      },
+      "200470": {
+        "close": 6090,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "036830": {
+        "close": 33650,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "101490": {
+        "close": 32550,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "005290": {
+        "close": 32200,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "281740": {
+        "close": 9680,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "101160": {
+        "close": 24400,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "052710": {
+        "close": 10580,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "010060": {
+        "close": 157800,
+        "source": "KRX stk_bydd_trd"
+      },
+      "265520": {
+        "close": 14390,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "089010": {
+        "close": 16750,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "388210": {
+        "close": 35400,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "092070": {
+        "close": 9710,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "281820": {
+        "close": 80300,
+        "source": "KRX stk_bydd_trd"
+      },
+      "045100": {
+        "close": 24200,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "037350": {
+        "close": 5030,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "053080": {
+        "close": 6980,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "056190": {
+        "close": 23550,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "039440": {
+        "close": 20850,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "306620": {
+        "close": 1298,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "178320": {
+        "close": 29350,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "159010": {
+        "close": 26200,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "489790": {
+        "close": 32850,
+        "source": "KRX stk_bydd_trd"
+      },
+      "081180": {
+        "close": 4550,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "475960": {
+        "close": 20950,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "217190": {
+        "close": 5060,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "412350": {
+        "close": 3625,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "071280": {
+        "close": 8190,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "187870": {
+        "close": 8450,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "219130": {
+        "close": 88000,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "446540": {
+        "close": 4890,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "424980": {
+        "close": 5950,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "317330": {
+        "close": 7680,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "425040": {
+        "close": 10600,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "278280": {
+        "close": 27700,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "001820": {
+        "close": 70200,
+        "source": "KRX stk_bydd_trd"
+      },
+      "149950": {
+        "close": 8140,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "078600": {
+        "close": 76100,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "005070": {
+        "close": 29700,
+        "source": "KRX stk_bydd_trd"
+      },
+      "006400": {
+        "close": 402500,
+        "source": "KRX stk_bydd_trd"
+      },
+      "373220": {
+        "close": 299500,
+        "source": "KRX stk_bydd_trd"
+      },
+      "066970": {
+        "close": 68700,
+        "source": "KRX stk_bydd_trd"
+      },
+      "086520": {
+        "close": 65200,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "247540": {
+        "close": 82700,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "010170": {
+        "close": 13980,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "138080": {
+        "close": 21200,
+        "source": "KRX ksq_bydd_trd"
+      },
+      "298040": {
+        "close": 1679000,
+        "source": "KRX stk_bydd_trd"
+      },
+      "267260": {
+        "close": 386500,
+        "source": "KRX stk_bydd_trd"
+      },
+      "062040": {
+        "close": 104800,
+        "source": "KRX stk_bydd_trd"
+      },
+      "010120": {
+        "close": 109700,
+        "source": "KRX stk_bydd_trd"
+      },
+      "103590": {
+        "close": 53700,
+        "source": "KRX stk_bydd_trd"
+      },
+      "000500": {
+        "close": 209000,
+        "source": "KRX stk_bydd_trd"
+      },
+      "001440": {
+        "close": 17010,
+        "source": "KRX stk_bydd_trd"
+      },
+      "006340": {
+        "close": 7540,
+        "source": "KRX stk_bydd_trd"
+      },
+      "004710": {
+        "close": 5200,
+        "source": "KRX stk_bydd_trd"
+      }
+    }
+  }
+}

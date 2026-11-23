@@ -8,6 +8,7 @@ from valuation.api import Quote
 from valuation.consensus import parse_annual_page
 from valuation.expanded import REFERENCE, build_expanded
 from valuation.workbook import FIRST
+from valuation.returns import load_snapshot, DATES, PAIRS, price_return
 
 
 def test_fnguide_uses_the_annual_table_and_keeps_total_net_separate():
@@ -77,8 +78,18 @@ def test_all_yoy_formula_references_follow_stock_code_after_per_sort(tmp_path, t
         assert raw.cell(raw_row, 54).value == quotes[code].volume
         assert raw.cell(raw_row, 61).value == f"KIS {code}"
         assert raw.cell(raw_row, 65).value == f"evidence {code}"
-    assert raw.tables["SourceTable"].ref == f"A9:BM{len(codes) + 9}"
-    assert len(raw.tables["SourceTable"].tableColumns) == 65
+    assert raw.tables["SourceTable"].ref == f"A9:BU{len(codes) + 9}"
+    assert len(raw.tables["SourceTable"].tableColumns) == 73
+    assert main.tables["ValuationTable"].ref == f"A9:AG{len(codes) + 9}"
+    snapshot = load_snapshot()
+    for code, row in rows.items():
+        source_row = codes.index(code) + FIRST
+        prices = [snapshot["days"][d][code]["close"] for d in DATES]
+        for offset, (a, b) in enumerate(PAIRS):
+            col = 30 + offset
+            assert main_values.cell(row, col).value == pytest.approx(price_return(prices[a], prices[b]))
+            assert f"원자료!{('BN','BO','BP','BQ')[a]}{source_row}" in main.cell(row, col).value
+            assert f"원자료!{('BN','BO','BP','BQ')[b]}{source_row}" in main.cell(row, col).value
     assert audit.max_row == 6 + len(codes) * 6
     assert all(area.max_row == len(codes) + 9 for group in main.conditional_formatting
                for area in group.sqref.ranges)
