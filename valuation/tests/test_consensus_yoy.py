@@ -46,6 +46,7 @@ def test_all_yoy_formula_references_follow_stock_code_after_per_sort(tmp_path, t
         codes = [row[1] for row in original.worksheets[1].iter_rows(min_row=FIRST, values_only=True)]
         original.close()
     quotes = {code: Quote(1000 + i, 1000000, "test", "test", "test", volume=i,
+                          trade_date="2026-11-09",
                           volume_source=f"KIS {code}", volume_basis=f"basis {code}",
                           volume_checked_at="checked", volume_evidence=f"evidence {code}")
               for i, code in enumerate(codes)}
@@ -84,7 +85,7 @@ def test_all_yoy_formula_references_follow_stock_code_after_per_sort(tmp_path, t
     snapshot = load_snapshot()
     for code, row in rows.items():
         source_row = codes.index(code) + FIRST
-        prices = [snapshot["days"][d][code]["close"] for d in DATES]
+        prices = [snapshot["days"][d][code]["close"] for d in DATES[:3]] + [quotes[code].price]
         for offset, (a, b) in enumerate(PAIRS):
             col = 30 + offset
             assert main_values.cell(row, col).value == pytest.approx(price_return(prices[a], prices[b]))

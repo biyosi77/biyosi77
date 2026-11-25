@@ -48,7 +48,8 @@ def prior_close(market, codes, day):
     raise DataError("previous trading day not verified")
 
 
-def build_expanded(old_file, output, day, quotes, previous_day, previous, consensus):
+def build_expanded(old_file, output, day, quotes, previous_day, previous, consensus, *,
+                   price_label="당일 종가", basis_label="15:30 KST KRX 정규장 종가"):
     old = load_workbook(old_file, data_only=True)
     book = load_workbook(REFERENCE)
     main, raw, audit = book.worksheets
@@ -73,8 +74,8 @@ def build_expanded(old_file, output, day, quotes, previous_day, previous, consen
     for row in range(FIRST, last + 1):
         for col in range(1, 29):
             raw.cell(row, col).value = original.cell(row, col).value
-    raw["A4"] = f"{day.isoformat()} KRX 정규장 15:30 종가 기준."
-    raw["I9"] = day.strftime("%m/%d") + " 당일 종가"
+    raw["A4"] = f"{day.isoformat()} {basis_label} 기준."
+    raw["I9"] = day.strftime("%m/%d") + " " + price_label
     raw["AW9"] = "직전 거래일 종가"
     raw["AX9"] = "직전 거래일"
     raw["AY9"] = "전일 종가 출처"
@@ -130,9 +131,9 @@ def build_expanded(old_file, output, day, quotes, previous_day, previous, consen
     per = {code: metric(caps[code], consensus[code]["years"].get(2027, {}).get("net"))
            for code in codes}
     ordered = sorted(codes, key=lambda c: (per[c] is None, per[c] if per[c] is not None else float("inf"), c))
-    main["A3"] = f"{day.isoformat()} 15:30 KST KRX 정규장 종가. 단위: 억원, 원, %, 배."
+    main["A3"] = f"{day.isoformat()} {basis_label}. 단위: 억원, 원, %, 배."
     main["A5"] = "연간 YoY. 연결 순이익은 지배주주 기준. FnGuide 공개값 및 대사는 YoY 대사 시트 참조."
-    main["D9"] = day.strftime("%m/%d") + " 당일 종가"
+    main["D9"] = day.strftime("%m/%d") + " " + price_label
     main["E9"] = previous_day.strftime("%m/%d") + " 전일 종가"
     cache = {}
     for index, code in enumerate(ordered):
@@ -322,7 +323,8 @@ def build_expanded(old_file, output, day, quotes, previous_day, previous, consen
              for address, value in cache.items()}
     for row, code in enumerate(ordered, FIRST):
         cache[f"D{row}"] = quotes[code].volume if quotes[code].volume is not None else "미확인"
-    return_values = append_returns(main, raw, ordered, codes, cache)
+    return_values = append_returns(main, raw, ordered, codes, cache, quotes, day,
+                                   price_label=price_label.replace("당일 ", ""))
     audit["A2"]=f"{len(codes)}종목 · {len(codes) * 6}항목 | {day.isoformat()} 기준"
     from openpyxl.workbook.properties import CalcProperties
     book.calculation = CalcProperties(fullCalcOnLoad=True)
@@ -352,7 +354,8 @@ def build_expanded(old_file, output, day, quotes, previous_day, previous, consen
     return {"total_stocks":len(codes),"successful_prices":sum(q.price is not None and q.shares is not None for q in quotes.values()),
         "missing":[c for c in ordered if quotes[c].price is None or quotes[c].shares is None],
         "missing_volume":[c for c in ordered if quotes[c].volume is None],
-        "fixed_returns": {"dates": DATES, "verified_stocks": sum(
+        "fixed_returns": {"baseline_dates": DATES[:3], "end_date": day.isoformat(),
+                          "end_basis": basis_label, "verified_stocks": sum(
             all(isinstance(v, (int, float)) for v in values) for values in return_values.values()),
             "missing": [c for c, values in return_values.items() if "미확인" in values]},
         "volume_verification": {

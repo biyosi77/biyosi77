@@ -33,10 +33,10 @@ def load_snapshot():
     return value
 
 
-def append_returns(main, raw, ordered, rows, cache, *, snapshot=None):
+def append_returns(main, raw, ordered, rows, cache, quotes, day, *, snapshot=None, price_label="종가"):
     snapshot = snapshot if snapshot is not None else load_snapshot()
     last = 9 + len(ordered)
-    raw_headers = [d + " KRX 종가" for d in DATES] + [
+    raw_headers = [d + " KRX 종가" for d in DATES[:3]] + [f"{day.isoformat()} {price_label}"] + [
         "고정일 종가 출처", "고정일 종가 조회시각", "고정일 종가 기준", "고정일 종가 예외 사유"]
     for col, header in enumerate(raw_headers, 66):
         cell = raw.cell(9, col, header)
@@ -46,21 +46,26 @@ def append_returns(main, raw, ordered, rows, cache, *, snapshot=None):
     expected = {}
     for code in ordered:
         rr = rows[code]
-        data = [snapshot["days"][d].get(code, {}) for d in DATES]
+        data = [snapshot["days"][d].get(code, {}) for d in DATES[:3]]
         prices = [item.get("close") for item in data]
+        quote = quotes[code]
+        if quote.trade_date != day.isoformat():
+            raise DataError("daily return end price trade date mismatch")
+        prices.append(quote.price)
         for col, value in enumerate(prices, 66):
             cell = raw.cell(rr, col, value if value is not None else "미확인")
             cell._style = copy(raw.cell(rr, 54)._style)
             cell.number_format = "#,##0"
-        reason = ", ".join(d for d, p in zip(DATES, prices) if p is None)
+        reason = ", ".join(d for d, p in zip((*DATES[:3], day.isoformat()), prices) if p is None)
         for col, value in enumerate((
-            "; ".join(sorted({item["source"] for item in data if item.get("source")})),
-            snapshot["checked_at"], "2026년 KRX 정규장 비수정 종가 (원/주)",
+            "; ".join(sorted({item["source"] for item in data if item.get("source")})) + "; 당일: " + quote.source,
+            "기준일: " + snapshot["checked_at"] + "; 당일: " + quote.checked_at,
+            "2026년 기준일 KRX 비수정 종가; 당일: " + quote.basis,
             "기준 종가 미확인: " + reason if reason else "",
         ), 70):
             raw.cell(rr, col, value)._style = copy(raw.cell(rr, 65)._style)
         expected[code] = [price_return(prices[a], prices[b]) for a, b in PAIRS]
-    main["AD6"] = "고정 기준일: 2026년 KRX 종가"
+    main["AD6"] = f"2026년 기준일 고정 · AF/AG 종료일 {day:%m/%d} {price_label}"
     main["AD7"] = "종가 수익률 = 종료일 / 시작일 − 1"
     main.merge_cells("AD6:AG6")
     main.merge_cells("AD7:AG7")
@@ -70,7 +75,9 @@ def append_returns(main, raw, ordered, rows, cache, *, snapshot=None):
     main["AD8"] = "기간 수익률 · %"
     main["AD8"]._style = copy(main["AA8"]._style)
     raw_letters = ("BN", "BO", "BP", "BQ")
-    for col, header in enumerate(HEADERS, 30):
+    headers = (*HEADERS[:2], f"10/06→{day:%m/%d}\n{price_label} 수익률",
+               f"07/30→{day:%m/%d}\n{price_label} 수익률")
+    for col, header in enumerate(headers, 30):
         cell = main.cell(9, col, header)
         cell._style = copy(main["AC9"]._style)
         cell.fill = PatternFill("solid", fgColor="305F68")
